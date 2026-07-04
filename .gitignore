@@ -1,0 +1,13 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+
+data/raw/
+data/frames/
+data/roboflow_ball/
+
+models/
+*.pt
+
+runs/

@@ -1,0 +1,6 @@
+ultralytics
+supervision
+opencv-python-headless
+roboflow
+yt-dlp
+python-dotenv
