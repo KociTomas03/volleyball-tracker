@@ -1,6 +1,6 @@
 ultralytics
 supervision
-opencv-python-headless
+opencv-python
 roboflow
 yt-dlp
 python-dotenv
