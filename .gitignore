@@ -6,6 +6,8 @@ __pycache__/
 .pytest_cache/
 
 data/raw/
+data/real_fotage/
+data/calibration/
 data/frames/
 data/frames_dense/
 data/frames_dense2/
