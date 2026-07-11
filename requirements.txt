@@ -4,3 +4,5 @@ opencv-python
 roboflow
 yt-dlp
 python-dotenv
+pytest
+ruff
