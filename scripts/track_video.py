@@ -357,6 +357,31 @@ def track_ball_heuristic(per_frame: dict[int, dict[str, list]], frame_indices: r
     return positions
 
 
+def track_players(per_frame: dict[int, dict[str, list]], frame_indices: range,
+                   fps: float) -> dict[int, sv.Detections]:
+    """Track players with ByteTrack across `frame_indices` (sequential - order matters
+    for ByteTrack's internal state) and return per-frame tracked detections.
+
+    Empirically tuned on a 500-frame slice: longer buffer / looser matching kept reducing
+    player ID *count* up to about this point (57 -> 40 -> 32 -> 30 unique ids), then plateaued.
+    That original tuning only ever measured total ID count, not ID *swaps* - a loose
+    minimum_matching_threshold (0.93 = accepts matches down to ~0.07 IoU) is exactly what lets
+    two crossing players' predicted boxes both fall in the same gate and get mismatched, since
+    ByteTrack has no appearance/Re-ID signal to disambiguate them. Tightened to 0.85 (still
+    looser than the 0.8 default) to reduce swap risk while spot-checking that ID count doesn't
+    blow up; minimum_consecutive_frames=2 delays new-track activation by a frame to suppress
+    one-off flicker without touching the matching gate. Revisit with appearance-based Re-ID
+    (see plan) if swaps are still visible at close-player crossings."""
+    player_tracker = sv.ByteTrack(track_activation_threshold=PLAYER_CONF, lost_track_buffer=120,
+                                   minimum_matching_threshold=0.85, minimum_consecutive_frames=2,
+                                   frame_rate=round(fps))
+    frame_players: dict[int, sv.Detections] = {}
+    for frame_idx in frame_indices:
+        entry = per_frame.get(frame_idx, {"player": [], "ball": []})
+        frame_players[frame_idx] = player_tracker.update_with_detections(to_sv_detections(entry["player"]))
+    return frame_players
+
+
 def run_tracking(video_path: Path, detections_csv: Path, out_video_path: Path,
                   max_frames: int | None = None, start_frame: int = 0, tracker: str = "kf"):
     per_frame = load_detections_csv(detections_csv)
@@ -372,28 +397,8 @@ def run_tracking(video_path: Path, detections_csv: Path, out_video_path: Path,
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     limit = min(max_frames, total - start_frame) if max_frames else total - start_frame
 
-    # Empirically tuned on a 500-frame slice: longer buffer / looser matching kept reducing
-    # player ID *count* up to about this point (57 -> 40 -> 32 -> 30 unique ids), then plateaued.
-    # That original tuning only ever measured total ID count, not ID *swaps* - a loose
-    # minimum_matching_threshold (0.93 = accepts matches down to ~0.07 IoU) is exactly what lets
-    # two crossing players' predicted boxes both fall in the same gate and get mismatched, since
-    # ByteTrack has no appearance/Re-ID signal to disambiguate them. Tightened to 0.85 (still
-    # looser than the 0.8 default) to reduce swap risk while spot-checking that ID count doesn't
-    # blow up; minimum_consecutive_frames=2 delays new-track activation by a frame to suppress
-    # one-off flicker without touching the matching gate. Revisit with appearance-based Re-ID
-    # (see plan) if swaps are still visible at close-player crossings.
-    player_tracker = sv.ByteTrack(track_activation_threshold=PLAYER_CONF, lost_track_buffer=120,
-                                   minimum_matching_threshold=0.85, minimum_consecutive_frames=2,
-                                   frame_rate=round(fps))
-
     # --- pass 1: track (sequential, order matters for player ByteTrack state) ---
-    frame_players: dict[int, sv.Detections] = {}
-
-    for i in range(limit):
-        frame_idx = start_frame + i
-        entry = per_frame.get(frame_idx, {"player": [], "ball": []})
-        p_tracked = player_tracker.update_with_detections(to_sv_detections(entry["player"]))
-        frame_players[frame_idx] = p_tracked
+    frame_players = track_players(per_frame, range(start_frame, start_frame + limit), fps)
 
     if tracker == "kf":
         ball_states = track_ball_states(per_frame, range(start_frame, start_frame + limit))
