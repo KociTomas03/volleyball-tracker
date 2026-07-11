@@ -10,6 +10,7 @@ data/frames/
 data/frames_dense/
 data/frames_dense2/
 data/roboflow_ball/
+data/combined_ball_dataset.yaml
 data/annotations/detect_review/
 data/annotations/ball_zero_shot/
 data/annotations/v2_precision_check/

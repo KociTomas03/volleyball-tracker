@@ -12,10 +12,23 @@ import cv2
 from ultralytics import YOLO
 
 PLAYER_MODEL_PATH = "models/yolov8n.pt"
-BALL_MODEL_PATH = "models/ball_yolov8n_v2.pt"
+BALL_MODEL_PATH = "models/ball_yolov8n_v3.pt"
 PLAYER_CONF = 0.4
 BALL_CONF = 0.25
 COCO_PERSON_CLASS = 0
+
+# Ultralytics' `model()` defaults to an internal conf=0.25 cutoff during inference/NMS,
+# applied before our own min_conf filtering ever sees the results. Without passing conf=
+# explicitly, that hidden default silently discards anything below 0.25 - including the
+# 0.1-0.25 band detect_video.py's --min-conf cache floor (and ByteTrack's hardcoded 0.1
+# low-confidence second-association tier) both depend on. Keep this well below 0.1 so
+# nothing in that band is clipped before it reaches our filtering/caching.
+DETECT_INTERNAL_CONF = 0.05
+
+# Ball is small (~15-20px at full 1280x720 res) - the default imgsz=640 halves source
+# resolution and shrinks it further. Only bump this for the ball model; players are
+# already large/easy targets and don't need the extra inference cost.
+BALL_IMGSZ = 1280
 
 _player_model = None
 _ball_model = None
@@ -35,15 +48,15 @@ def _get_ball_model() -> YOLO:
     return _ball_model
 
 
-def detect_players(image_path: str) -> list[dict]:
+def detect_players(image_path: str, min_conf: float = PLAYER_CONF) -> list[dict]:
     model = _get_player_model()
-    results = model(image_path, verbose=False)[0]
+    results = model(image_path, conf=DETECT_INTERNAL_CONF, verbose=False)[0]
     out = []
     for box in results.boxes:
         if int(box.cls[0]) != COCO_PERSON_CLASS:
             continue
         conf = float(box.conf[0])
-        if conf < PLAYER_CONF:
+        if conf < min_conf:
             continue
         out.append({
             "class": "player",
@@ -53,13 +66,13 @@ def detect_players(image_path: str) -> list[dict]:
     return out
 
 
-def detect_ball(image_path: str) -> list[dict]:
+def detect_ball(image_path: str, min_conf: float = BALL_CONF) -> list[dict]:
     model = _get_ball_model()
-    results = model(image_path, verbose=False)[0]
+    results = model(image_path, conf=DETECT_INTERNAL_CONF, imgsz=BALL_IMGSZ, verbose=False)[0]
     out = []
     for box in results.boxes:
         conf = float(box.conf[0])
-        if conf < BALL_CONF:
+        if conf < min_conf:
             continue
         out.append({
             "class": "ball",
