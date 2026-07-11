@@ -48,6 +48,20 @@ OUT_OF_BOUNDS_MARGIN_M = 3.0  # ball beyond court+this margin is treated as "out
 # with calibrate.py at some point, but that's Phase 4 code outside this change's scope.
 FRONT_ZONE_DEPTH_M = 3.0
 
+# Verified on real footage (SLAP_SVIT_1z_upr, frames 26700-28199): a referee standing
+# on the elevated stand at the net post got tracked as track_id 13 for the whole
+# 1500-frame slice and moved only 59px (bbox-bottom, diagonal bounding extent) the
+# entire time, vs. 300-700px for every real player track observed for a comparable
+# duration in the same slice. min_frames guards against flagging a real player's
+# brief, legitimately-still moment (e.g. mid-rally poised in a passing stance) as
+# stationary just because a short track didn't have time to move - only a track this
+# long staying this still is a reliable non-player signal. Deliberately pixel-space,
+# not court-space: a court-space extent would inherit the same calibration distortion
+# already documented in within_court_bounds, undermining the very separation this is
+# meant to detect.
+STATIONARY_MIN_FRAMES = 150  # ~5s at ~30fps
+STATIONARY_MAX_EXTENT_PX = 150.0  # well above the referee's 59px, well below any real player's 300px+
+
 
 def within_court_bounds(point_court: tuple[float, float], margin_m: float = OUT_OF_BOUNDS_MARGIN_M) -> bool:
     """True if a court-space point falls within the court, padded by `margin_m`.
@@ -73,6 +87,33 @@ def player_foot_point(box: tuple[float, float, float, float]) -> tuple[float, fl
     floor, used instead of box center (which sits mid-torso, not on the ground)."""
     x1, y1, x2, y2 = box
     return (x1 + x2) / 2, y2
+
+
+def stationary_track_ids(foot_px_by_frame: dict[int, dict[int, tuple[float, float]]],
+                          min_frames: int = STATIONARY_MIN_FRAMES,
+                          max_extent_px: float = STATIONARY_MAX_EXTENT_PX) -> set[int]:
+    """Track ids that barely move (bounding-box diagonal extent of their pixel foot
+    point stays under `max_extent_px`) over at least `min_frames` observations -
+    almost never a real, actively-playing volleyball player over that many frames, and
+    empirically exactly how a court-side referee/official shows up (see the constants'
+    docstring above). Tracks with fewer than `min_frames` observations aren't judged
+    either way - not enough evidence to tell a genuinely brief, still moment apart from
+    a non-player."""
+    positions_by_track: dict[int, list[tuple[float, float]]] = {}
+    for players in foot_px_by_frame.values():
+        for track_id, pos in players.items():
+            positions_by_track.setdefault(track_id, []).append(pos)
+
+    stationary = set()
+    for track_id, positions in positions_by_track.items():
+        if len(positions) < min_frames:
+            continue
+        xs = [p[0] for p in positions]
+        ys = [p[1] for p in positions]
+        extent = math.dist((min(xs), min(ys)), (max(xs), max(ys)))
+        if extent <= max_extent_px:
+            stationary.add(track_id)
+    return stationary
 
 
 def find_ball_contacts(ball_y_by_frame: dict[int, float], window: int = CONTACT_WINDOW_FRAMES,
@@ -269,15 +310,25 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
     ball_positions_court = {
         f: pixel_to_court((cx, cy), homography) for f, (cx, cy, _interp) in ball_by_frame.items()
     }
+    foot_px_by_frame: dict[int, dict[int, tuple[float, float]]] = {}
     player_positions_court_by_frame: dict[int, dict[int, tuple[float, float]]] = {}
     for frame_idx, dets in frame_players.items():
-        players = {}
+        feet, players = {}, {}
         for box, track_id in zip(dets.xyxy, dets.tracker_id):
+            track_id = int(track_id)
             foot_px = player_foot_point(tuple(float(v) for v in box))
+            feet[track_id] = foot_px
             court_pos = pixel_to_court(foot_px, homography)
             if within_court_bounds(court_pos):
-                players[int(track_id)] = court_pos
+                players[track_id] = court_pos
+        foot_px_by_frame[frame_idx] = feet
         player_positions_court_by_frame[frame_idx] = players
+
+    stationary_ids = stationary_track_ids(foot_px_by_frame)
+    player_positions_court_by_frame = {
+        frame_idx: {tid: pos for tid, pos in players.items() if tid not in stationary_ids}
+        for frame_idx, players in player_positions_court_by_frame.items()
+    }
 
     contacts = find_ball_contacts(ball_y_px_by_frame)
     net_crossings = detect_net_crossings(
@@ -301,6 +352,7 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
             for t in touches
         ],
         "zone_occupancy": {str(track_id): zones for track_id, zones in zone_occupancy.items()},
+        "excluded_stationary_track_ids": sorted(stationary_ids),
     }
 
 

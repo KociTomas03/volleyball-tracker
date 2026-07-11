@@ -11,12 +11,35 @@ from derive_stats import (
     find_nearest_player,
     player_foot_point,
     segment_rallies,
+    stationary_track_ids,
     zone_for_position,
 )
 
 
 def test_player_foot_point_is_bottom_center():
     assert player_foot_point((0.0, 10.0, 20.0, 50.0)) == (10.0, 50.0)
+
+
+# --- stationary_track_ids ---
+
+def test_stationary_track_ids_flags_long_still_track():
+    # track 1 barely moves over 200 frames; track 2 moves freely.
+    foot_px_by_frame = {}
+    for f in range(200):
+        foot_px_by_frame[f] = {1: (100.0 + (f % 3), 200.0), 2: (100.0 + f * 5.0, 200.0)}
+    stationary = stationary_track_ids(foot_px_by_frame, min_frames=150, max_extent_px=150.0)
+    assert stationary == {1}
+
+
+def test_stationary_track_ids_ignores_short_lived_still_track():
+    # track 1 is still, but only observed for 50 frames - not enough evidence.
+    foot_px_by_frame = {f: {1: (100.0, 200.0)} for f in range(50)}
+    stationary = stationary_track_ids(foot_px_by_frame, min_frames=150, max_extent_px=150.0)
+    assert stationary == set()
+
+
+def test_stationary_track_ids_no_tracks_returns_empty():
+    assert stationary_track_ids({}, min_frames=150, max_extent_px=150.0) == set()
 
 
 # --- find_ball_contacts ---
