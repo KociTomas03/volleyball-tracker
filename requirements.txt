@@ -1,5 +1,5 @@
 ultralytics
-supervision
+supervision<0.30.0
 opencv-python
 roboflow
 yt-dlp

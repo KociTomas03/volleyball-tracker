@@ -16,6 +16,7 @@ data/annotations/ball_zero_shot/
 data/annotations/v2_precision_check/
 data/self_labeled/*/images/
 data/self_labeled/*/labels.cache
+data/tracked/
 
 models/
 *.pt
