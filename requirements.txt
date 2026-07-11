@@ -4,5 +4,6 @@ opencv-python
 roboflow
 yt-dlp
 python-dotenv
+google-genai
 pytest
 ruff
