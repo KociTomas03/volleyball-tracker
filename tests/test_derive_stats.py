@@ -215,6 +215,23 @@ def test_attribute_touches_skips_contact_with_no_ball_position():
     assert touches == []
 
 
+def test_attribute_touches_rejects_implausibly_distant_nearest_player():
+    # Nearest tracked player is 20m away - a spurious contact (e.g. dead-ball ball roll)
+    # or a real touch whose actual toucher wasn't tracked that frame, not a real touch by
+    # this distant player.
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (20.0, 0.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_m=3.0)
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_m=20.0)]
+
+
+def test_attribute_touches_accepts_nearest_player_within_max_distance():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (2.0, 0.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_m=3.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_m=2.0)]
+
+
 # --- zone bucketing ---
 
 @pytest.mark.parametrize("point, expected_zone", [

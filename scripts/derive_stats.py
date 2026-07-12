@@ -40,6 +40,7 @@ NET_CROSSING_X_MARGIN_M = 1.0  # how far outside the sidelines a net crossing ma
 MAX_DEAD_GAP_FRAMES = 90  # ~3s at ~30fps - longer than this without an in-bounds ball position ends a rally segment
 MIN_RALLY_CROSSINGS = 2  # a real rally has the ball crossing the net at least this many times (serve + return); fewer is a toss/warm-up touch
 OUT_OF_BOUNDS_MARGIN_M = 3.0  # ball beyond court+this margin is treated as "out of active play" for rally segmentation
+MAX_TOUCH_ATTRIBUTION_DISTANCE_M = 3.0  # beyond this, "nearest tracked player" is untrustworthy - see attribute_touches
 
 # Regulation: the attack line sits 3m from the net, not 3m from the baseline. Kept as
 # an independent constant rather than reusing calibrate.py's ATTACK_LINE_M, which is
@@ -240,12 +241,19 @@ class Touch:
 
 
 def attribute_touches(contacts: list[int], ball_positions_court: dict[int, tuple[float, float]],
-                       player_positions_court_by_frame: dict[int, dict[int, tuple[float, float]]]) -> list[Touch]:
+                       player_positions_court_by_frame: dict[int, dict[int, tuple[float, float]]],
+                       max_distance_m: float = MAX_TOUCH_ATTRIBUTION_DISTANCE_M) -> list[Touch]:
     """For each contact frame, attribute the touch to whichever tracked player's foot
-    point is nearest the ball in court space at that frame. Falls back to an
-    unattributed touch (track_id=None) if no player is tracked that frame (occlusion)
-    or the ball itself has no position there - a documented limitation, same shape as
-    this project's other accepted tracking-limitation tradeoffs."""
+    point is nearest the ball in court space at that frame - but only if that nearest
+    player is within `max_distance_m`. Verified on real footage (SLAP_SVIT_1z_upr) that
+    without this cap, "nearest tracked player" silently picks up players uninvolved in
+    the play whenever the true toucher isn't tracked that frame (e.g. a diving dig with
+    a distorted bbox) or the contact itself is spurious (the ball bouncing/rolling to a
+    stop right after a point ends, before segment_rallies' dead-gap threshold kicks in) -
+    both produced 20+ meter "nearest player" distances. Falls back to an unattributed
+    touch (track_id=None) if no player is tracked that frame, the nearest one is
+    implausibly far, or the ball itself has no position there - a documented limitation,
+    same shape as this project's other accepted tracking-limitation tradeoffs."""
     touches = []
     for frame_idx in contacts:
         ball_pos = ball_positions_court.get(frame_idx)
@@ -254,8 +262,11 @@ def attribute_touches(contacts: list[int], ball_positions_court: dict[int, tuple
         nearest = find_nearest_player(ball_pos, player_positions_court_by_frame.get(frame_idx, {}))
         if nearest is None:
             touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_m=None))
+            continue
+        track_id, dist = nearest
+        if dist > max_distance_m:
+            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_m=dist))
         else:
-            track_id, dist = nearest
             touches.append(Touch(frame_idx=frame_idx, track_id=track_id, distance_m=dist))
     return touches
 
@@ -356,7 +367,16 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         frame_idx: players for frame_idx, players in player_positions_court_by_frame.items()
         if frame_idx in in_play_frames
     }
-    touches = attribute_touches(in_play_contacts, ball_positions_court, in_play_player_positions)
+    # Same homography-extrapolation risk documented in within_court_bounds applies to the
+    # ball, not just players - a contact frame whose reprojected ball position lands
+    # implausibly far off-court (verified on real footage: a normal on-screen ball pixel
+    # reprojecting to thousands of meters away) would otherwise make attribute_touches
+    # compute a "nearest player" against a meaningless point. Filtering here means such a
+    # contact is dropped rather than misattributed - same treatment as a missing position.
+    trusted_ball_positions_court = {
+        f: pos for f, pos in ball_positions_court.items() if within_court_bounds(pos)
+    }
+    touches = attribute_touches(in_play_contacts, trusted_ball_positions_court, in_play_player_positions)
     zone_occupancy = compute_zone_occupancy(in_play_player_positions)
 
     return {

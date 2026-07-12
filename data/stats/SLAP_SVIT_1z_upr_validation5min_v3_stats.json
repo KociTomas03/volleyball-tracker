@@ -59,19 +59,19 @@
   "touches": [
     {
       "frame_idx": 12089,
-      "track_id": 11,
+      "track_id": null,
       "distance_m": 9.27,
       "time_s": 403.37
     },
     {
       "frame_idx": 12100,
-      "track_id": 15,
+      "track_id": null,
       "distance_m": 9.06,
       "time_s": 403.74
     },
     {
       "frame_idx": 12128,
-      "track_id": 20,
+      "track_id": null,
       "distance_m": 4.91,
       "time_s": 404.67
     },
@@ -83,21 +83,15 @@
     },
     {
       "frame_idx": 12176,
-      "track_id": 16,
+      "track_id": null,
       "distance_m": 4.62,
       "time_s": 406.27
     },
     {
       "frame_idx": 12229,
-      "track_id": 15,
+      "track_id": null,
       "distance_m": 7.12,
       "time_s": 408.04
-    },
-    {
-      "frame_idx": 12248,
-      "track_id": 15,
-      "distance_m": 4.06,
-      "time_s": 408.67
     },
     {
       "frame_idx": 12297,
@@ -112,30 +106,6 @@
       "time_s": 411.71
     },
     {
-      "frame_idx": 12359,
-      "track_id": 32,
-      "distance_m": 2.32,
-      "time_s": 412.38
-    },
-    {
-      "frame_idx": 12394,
-      "track_id": 10,
-      "distance_m": 3.02,
-      "time_s": 413.55
-    },
-    {
-      "frame_idx": 12428,
-      "track_id": 41,
-      "distance_m": 1.73,
-      "time_s": 414.68
-    },
-    {
-      "frame_idx": 12464,
-      "track_id": 45,
-      "distance_m": 36.21,
-      "time_s": 415.88
-    },
-    {
       "frame_idx": 12508,
       "track_id": 32,
       "distance_m": 0.61,
@@ -143,75 +113,39 @@
     },
     {
       "frame_idx": 12552,
-      "track_id": 47,
+      "track_id": null,
       "distance_m": 5.49,
       "time_s": 418.82
     },
     {
-      "frame_idx": 12589,
-      "track_id": 32,
-      "distance_m": 35.45,
-      "time_s": 420.05
-    },
-    {
       "frame_idx": 12623,
-      "track_id": 58,
+      "track_id": null,
       "distance_m": 10.48,
       "time_s": 421.19
     },
     {
-      "frame_idx": 12650,
-      "track_id": null,
-      "distance_m": null,
-      "time_s": 422.09
-    },
-    {
-      "frame_idx": 12659,
-      "track_id": 57,
-      "distance_m": 9.26,
-      "time_s": 422.39
-    },
-    {
       "frame_idx": 12687,
-      "track_id": 57,
+      "track_id": null,
       "distance_m": 10.13,
       "time_s": 423.32
     },
     {
       "frame_idx": 12763,
-      "track_id": 71,
+      "track_id": null,
       "distance_m": 4.45,
       "time_s": 425.86
     },
     {
       "frame_idx": 12783,
-      "track_id": 71,
+      "track_id": null,
       "distance_m": 9.85,
       "time_s": 426.53
     },
     {
-      "frame_idx": 12800,
-      "track_id": 62,
-      "distance_m": 11.58,
-      "time_s": 427.09
-    },
-    {
       "frame_idx": 12968,
-      "track_id": 59,
+      "track_id": null,
       "distance_m": 14.28,
       "time_s": 432.7
-    },
-    {
-      "frame_idx": 13010,
-      "track_id": 83,
-      "distance_m": 3.69,
-      "time_s": 434.1
-    },
-    {
-      "frame_idx": 13056,
-      "track_id": 75,
-      "distance_m": 9.31,
-      "time_s": 435.64
     },
     {
       "frame_idx": 13080,
@@ -221,13 +155,13 @@
     },
     {
       "frame_idx": 13105,
-      "track_id": 59,
+      "track_id": null,
       "distance_m": 3.64,
       "time_s": 437.27
     },
     {
       "frame_idx": 13170,
-      "track_id": 87,
+      "track_id": null,
       "distance_m": 9.82,
       "time_s": 439.44
     },
@@ -238,26 +172,20 @@
       "time_s": 441.61
     },
     {
-      "frame_idx": 13265,
-      "track_id": 97,
-      "distance_m": 74.83,
-      "time_s": 442.61
-    },
-    {
       "frame_idx": 13319,
-      "track_id": 97,
+      "track_id": null,
       "distance_m": 4.38,
       "time_s": 444.41
     },
     {
       "frame_idx": 13343,
-      "track_id": 59,
+      "track_id": null,
       "distance_m": 3.03,
       "time_s": 445.21
     },
     {
       "frame_idx": 13371,
-      "track_id": 59,
+      "track_id": null,
       "distance_m": 11.72,
       "time_s": 446.15
     },
@@ -268,32 +196,14 @@
       "time_s": 447.35
     },
     {
-      "frame_idx": 13423,
-      "track_id": 59,
-      "distance_m": 20.7,
-      "time_s": 447.88
-    },
-    {
-      "frame_idx": 13473,
-      "track_id": 111,
-      "distance_m": 6.74,
-      "time_s": 449.55
-    },
-    {
-      "frame_idx": 13514,
-      "track_id": 59,
-      "distance_m": 40.47,
-      "time_s": 450.92
-    },
-    {
       "frame_idx": 13540,
-      "track_id": 120,
+      "track_id": null,
       "distance_m": 14.28,
       "time_s": 451.78
     },
     {
       "frame_idx": 13546,
-      "track_id": 113,
+      "track_id": null,
       "distance_m": 15.25,
       "time_s": 451.98
     },
@@ -302,12 +212,6 @@
       "track_id": 130,
       "distance_m": 1.79,
       "time_s": 453.82
-    },
-    {
-      "frame_idx": 13636,
-      "track_id": 120,
-      "distance_m": 27.15,
-      "time_s": 454.99
     },
     {
       "frame_idx": 13687,
@@ -346,12 +250,6 @@
       "time_s": 473.21
     },
     {
-      "frame_idx": 14218,
-      "track_id": 159,
-      "distance_m": 35.29,
-      "time_s": 474.41
-    },
-    {
       "frame_idx": 14237,
       "track_id": 166,
       "distance_m": 2.98,
@@ -359,27 +257,9 @@
     },
     {
       "frame_idx": 14259,
-      "track_id": 166,
+      "track_id": null,
       "distance_m": 4.29,
       "time_s": 475.78
-    },
-    {
-      "frame_idx": 14302,
-      "track_id": 168,
-      "distance_m": 28.82,
-      "time_s": 477.21
-    },
-    {
-      "frame_idx": 14318,
-      "track_id": 168,
-      "distance_m": 29.42,
-      "time_s": 477.74
-    },
-    {
-      "frame_idx": 14350,
-      "track_id": 172,
-      "distance_m": 3.94,
-      "time_s": 478.81
     },
     {
       "frame_idx": 14363,
@@ -389,87 +269,57 @@
     },
     {
       "frame_idx": 14405,
-      "track_id": 178,
+      "track_id": null,
       "distance_m": 14.25,
       "time_s": 480.65
     },
     {
       "frame_idx": 14455,
-      "track_id": 174,
+      "track_id": null,
       "distance_m": 9.78,
       "time_s": 482.32
     },
     {
-      "frame_idx": 14502,
-      "track_id": 180,
-      "distance_m": 6.43,
-      "time_s": 483.88
-    },
-    {
       "frame_idx": 14539,
-      "track_id": 181,
+      "track_id": null,
       "distance_m": 7.23,
       "time_s": 485.12
     },
     {
       "frame_idx": 14571,
-      "track_id": 184,
+      "track_id": null,
       "distance_m": 7.45,
       "time_s": 486.19
     },
     {
       "frame_idx": 14588,
-      "track_id": 186,
+      "track_id": null,
       "distance_m": 10.92,
       "time_s": 486.75
     },
     {
-      "frame_idx": 14610,
-      "track_id": 177,
-      "distance_m": 2.58,
-      "time_s": 487.49
-    },
-    {
       "frame_idx": 14629,
-      "track_id": 186,
+      "track_id": null,
       "distance_m": 5.54,
       "time_s": 488.12
     },
     {
       "frame_idx": 14637,
-      "track_id": 163,
+      "track_id": null,
       "distance_m": 8.37,
       "time_s": 488.39
     },
     {
       "frame_idx": 14648,
-      "track_id": 163,
+      "track_id": null,
       "distance_m": 9.56,
       "time_s": 488.75
     },
     {
-      "frame_idx": 14660,
-      "track_id": 174,
-      "distance_m": 50.4,
-      "time_s": 489.16
-    },
-    {
       "frame_idx": 14729,
-      "track_id": 163,
+      "track_id": null,
       "distance_m": 21.81,
       "time_s": 491.46
-    },
-    {
-      "frame_idx": 14779,
-      "track_id": 194,
-      "distance_m": 14.99,
-      "time_s": 493.13
-    },
-    {
-      "frame_idx": 14802,
-      "track_id": 159,
-      "distance_m": 4.21,
-      "time_s": 493.89
     },
     {
       "frame_idx": 14853,
@@ -490,64 +340,16 @@
       "time_s": 504.84
     },
     {
-      "frame_idx": 15155,
-      "track_id": 163,
-      "distance_m": 51.35,
-      "time_s": 505.67
-    },
-    {
-      "frame_idx": 15207,
-      "track_id": 204,
-      "distance_m": 7.04,
-      "time_s": 507.41
-    },
-    {
-      "frame_idx": 15246,
-      "track_id": 214,
-      "distance_m": 15.79,
-      "time_s": 508.71
-    },
-    {
-      "frame_idx": 15279,
-      "track_id": 215,
-      "distance_m": 38.13,
-      "time_s": 509.81
-    },
-    {
       "frame_idx": 15312,
-      "track_id": 211,
+      "track_id": null,
       "distance_m": 20.53,
       "time_s": 510.91
     },
     {
       "frame_idx": 15348,
-      "track_id": 222,
+      "track_id": null,
       "distance_m": 13.33,
       "time_s": 512.11
-    },
-    {
-      "frame_idx": 15385,
-      "track_id": 214,
-      "distance_m": 2.13,
-      "time_s": 513.35
-    },
-    {
-      "frame_idx": 15462,
-      "track_id": 219,
-      "distance_m": 2.96,
-      "time_s": 515.92
-    },
-    {
-      "frame_idx": 15468,
-      "track_id": 214,
-      "distance_m": 2.89,
-      "time_s": 516.12
-    },
-    {
-      "frame_idx": 15521,
-      "track_id": 218,
-      "distance_m": 3.81,
-      "time_s": 517.88
     },
     {
       "frame_idx": 15626,
@@ -557,19 +359,19 @@
     },
     {
       "frame_idx": 15659,
-      "track_id": 229,
+      "track_id": null,
       "distance_m": 14.0,
       "time_s": 522.49
     },
     {
       "frame_idx": 15705,
-      "track_id": 240,
+      "track_id": null,
       "distance_m": 4.99,
       "time_s": 524.02
     },
     {
       "frame_idx": 15751,
-      "track_id": 240,
+      "track_id": null,
       "distance_m": 3.54,
       "time_s": 525.56
     },
@@ -598,20 +400,8 @@
       "time_s": 529.63
     },
     {
-      "frame_idx": 15891,
-      "track_id": 264,
-      "distance_m": 46.9,
-      "time_s": 530.23
-    },
-    {
-      "frame_idx": 15900,
-      "track_id": 256,
-      "distance_m": 661.96,
-      "time_s": 530.53
-    },
-    {
       "frame_idx": 15915,
-      "track_id": 256,
+      "track_id": null,
       "distance_m": 4.4,
       "time_s": 531.03
     },
@@ -622,86 +412,26 @@
       "time_s": 532.1
     },
     {
-      "frame_idx": 15992,
-      "track_id": 257,
-      "distance_m": 8.3,
-      "time_s": 533.6
-    },
-    {
-      "frame_idx": 16006,
-      "track_id": 256,
-      "distance_m": 51.97,
-      "time_s": 534.07
-    },
-    {
-      "frame_idx": 16041,
-      "track_id": 256,
-      "distance_m": 3.88,
-      "time_s": 535.23
-    },
-    {
-      "frame_idx": 16080,
-      "track_id": 276,
-      "distance_m": 1.26,
-      "time_s": 536.54
-    },
-    {
       "frame_idx": 16195,
       "track_id": 289,
       "distance_m": 1.9,
       "time_s": 540.37
     },
     {
-      "frame_idx": 16239,
-      "track_id": 279,
-      "distance_m": 126.06,
-      "time_s": 541.84
-    },
-    {
       "frame_idx": 16262,
-      "track_id": 282,
+      "track_id": null,
       "distance_m": 19.06,
       "time_s": 542.61
     },
     {
-      "frame_idx": 16280,
-      "track_id": 282,
-      "distance_m": 47.39,
-      "time_s": 543.21
-    },
-    {
-      "frame_idx": 16302,
-      "track_id": null,
-      "distance_m": null,
-      "time_s": 543.94
-    },
-    {
-      "frame_idx": 16320,
-      "track_id": null,
-      "distance_m": null,
-      "time_s": 544.54
-    },
-    {
-      "frame_idx": 16335,
-      "track_id": null,
-      "distance_m": null,
-      "time_s": 545.04
-    },
-    {
       "frame_idx": 16381,
-      "track_id": 295,
+      "track_id": null,
       "distance_m": 12.96,
       "time_s": 546.58
     },
     {
-      "frame_idx": 16399,
-      "track_id": 298,
-      "distance_m": 7.74,
-      "time_s": 547.18
-    },
-    {
       "frame_idx": 16420,
-      "track_id": 299,
+      "track_id": null,
       "distance_m": 6.37,
       "time_s": 547.88
     },
@@ -718,38 +448,14 @@
       "time_s": 553.22
     },
     {
-      "frame_idx": 16613,
-      "track_id": 311,
-      "distance_m": 6.44,
-      "time_s": 554.32
-    },
-    {
       "frame_idx": 16644,
       "track_id": 311,
       "distance_m": 1.01,
       "time_s": 555.35
     },
     {
-      "frame_idx": 16659,
-      "track_id": 298,
-      "distance_m": 3.23,
-      "time_s": 555.86
-    },
-    {
-      "frame_idx": 16698,
-      "track_id": 319,
-      "distance_m": 7.19,
-      "time_s": 557.16
-    },
-    {
-      "frame_idx": 16737,
-      "track_id": 319,
-      "distance_m": 895.8,
-      "time_s": 558.46
-    },
-    {
       "frame_idx": 16753,
-      "track_id": 317,
+      "track_id": null,
       "distance_m": 18.33,
       "time_s": 558.99
     },
@@ -760,26 +466,14 @@
       "time_s": 560.79
     },
     {
-      "frame_idx": 16866,
-      "track_id": 307,
-      "distance_m": 11.71,
-      "time_s": 562.76
-    },
-    {
-      "frame_idx": 16877,
-      "track_id": 307,
-      "distance_m": 19.55,
-      "time_s": 563.13
-    },
-    {
       "frame_idx": 16895,
-      "track_id": 330,
+      "track_id": null,
       "distance_m": 8.01,
       "time_s": 563.73
     },
     {
       "frame_idx": 16905,
-      "track_id": 330,
+      "track_id": null,
       "distance_m": 7.33,
       "time_s": 564.06
     },
@@ -790,26 +484,14 @@
       "time_s": 564.83
     },
     {
-      "frame_idx": 16985,
-      "track_id": 337,
-      "distance_m": 31.7,
-      "time_s": 566.73
-    },
-    {
-      "frame_idx": 17003,
-      "track_id": 337,
-      "distance_m": 42.4,
-      "time_s": 567.33
-    },
-    {
       "frame_idx": 17023,
-      "track_id": 337,
+      "track_id": null,
       "distance_m": 8.31,
       "time_s": 568.0
     },
     {
       "frame_idx": 17042,
-      "track_id": 330,
+      "track_id": null,
       "distance_m": 16.54,
       "time_s": 568.63
     },
@@ -827,15 +509,9 @@
     },
     {
       "frame_idx": 17141,
-      "track_id": 335,
+      "track_id": null,
       "distance_m": 15.59,
       "time_s": 571.94
-    },
-    {
-      "frame_idx": 17159,
-      "track_id": 333,
-      "distance_m": 5.94,
-      "time_s": 572.54
     },
     {
       "frame_idx": 17202,
@@ -844,58 +520,28 @@
       "time_s": 573.97
     },
     {
-      "frame_idx": 17308,
-      "track_id": 358,
-      "distance_m": 54.5,
-      "time_s": 577.51
-    },
-    {
       "frame_idx": 17324,
-      "track_id": 359,
+      "track_id": null,
       "distance_m": 6.03,
       "time_s": 578.04
     },
     {
-      "frame_idx": 17362,
-      "track_id": 360,
-      "distance_m": 16.07,
-      "time_s": 579.31
-    },
-    {
       "frame_idx": 17405,
-      "track_id": 365,
+      "track_id": null,
       "distance_m": 5.54,
       "time_s": 580.75
     },
     {
-      "frame_idx": 17540,
-      "track_id": null,
-      "distance_m": null,
-      "time_s": 585.25
-    },
-    {
       "frame_idx": 17591,
-      "track_id": 381,
+      "track_id": null,
       "distance_m": 7.23,
       "time_s": 586.95
-    },
-    {
-      "frame_idx": 17606,
-      "track_id": 377,
-      "distance_m": 14.08,
-      "time_s": 587.45
     },
     {
       "frame_idx": 17741,
       "track_id": 385,
       "distance_m": 1.32,
       "time_s": 591.96
-    },
-    {
-      "frame_idx": 17759,
-      "track_id": 385,
-      "distance_m": 1.52,
-      "time_s": 592.56
     },
     {
       "frame_idx": 17782,
@@ -917,13 +563,13 @@
     },
     {
       "frame_idx": 17877,
-      "track_id": 393,
+      "track_id": null,
       "distance_m": 18.59,
       "time_s": 596.5
     },
     {
       "frame_idx": 18384,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 3.21,
       "time_s": 613.41
     },
@@ -940,12 +586,6 @@
       "time_s": 615.58
     },
     {
-      "frame_idx": 18464,
-      "track_id": 399,
-      "distance_m": 4.45,
-      "time_s": 616.08
-    },
-    {
       "frame_idx": 18516,
       "track_id": 394,
       "distance_m": 1.31,
@@ -953,93 +593,57 @@
     },
     {
       "frame_idx": 18583,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 5.67,
       "time_s": 620.05
     },
     {
-      "frame_idx": 18610,
-      "track_id": 394,
-      "distance_m": 126.19,
-      "time_s": 620.95
-    },
-    {
       "frame_idx": 18638,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 16.04,
       "time_s": 621.89
     },
     {
       "frame_idx": 18682,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 5.64,
       "time_s": 623.36
     },
     {
-      "frame_idx": 18692,
-      "track_id": 408,
-      "distance_m": 158.32,
-      "time_s": 623.69
-    },
-    {
       "frame_idx": 18703,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 12.76,
       "time_s": 624.06
     },
     {
       "frame_idx": 18754,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 11.85,
       "time_s": 625.76
     },
     {
       "frame_idx": 18815,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 9.6,
       "time_s": 627.79
     },
     {
       "frame_idx": 18844,
-      "track_id": 403,
+      "track_id": null,
       "distance_m": 7.8,
       "time_s": 628.76
     },
     {
-      "frame_idx": 18875,
-      "track_id": 403,
-      "distance_m": 44.05,
-      "time_s": 629.8
-    },
-    {
-      "frame_idx": 18884,
-      "track_id": 419,
-      "distance_m": 17.01,
-      "time_s": 630.1
-    },
-    {
       "frame_idx": 18897,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 18.99,
       "time_s": 630.53
     },
     {
       "frame_idx": 18920,
-      "track_id": 394,
+      "track_id": null,
       "distance_m": 7.17,
       "time_s": 631.3
-    },
-    {
-      "frame_idx": 18949,
-      "track_id": 427,
-      "distance_m": 1.7,
-      "time_s": 632.26
-    },
-    {
-      "frame_idx": 18999,
-      "track_id": 425,
-      "distance_m": 9.27,
-      "time_s": 633.93
     },
     {
       "frame_idx": 19100,
@@ -1054,94 +658,52 @@
       "time_s": 638.24
     },
     {
-      "frame_idx": 19151,
-      "track_id": 437,
-      "distance_m": 18.64,
-      "time_s": 639.01
-    },
-    {
       "frame_idx": 19179,
-      "track_id": 439,
+      "track_id": null,
       "distance_m": 10.22,
       "time_s": 639.94
     },
     {
       "frame_idx": 19215,
-      "track_id": 436,
+      "track_id": null,
       "distance_m": 7.47,
       "time_s": 641.14
     },
     {
-      "frame_idx": 19244,
-      "track_id": 444,
-      "distance_m": 6.09,
-      "time_s": 642.11
-    },
-    {
-      "frame_idx": 19266,
-      "track_id": 444,
-      "distance_m": 204.3,
-      "time_s": 642.84
-    },
-    {
       "frame_idx": 19283,
-      "track_id": 436,
+      "track_id": null,
       "distance_m": 16.6,
       "time_s": 643.41
     },
     {
       "frame_idx": 19295,
-      "track_id": 436,
+      "track_id": null,
       "distance_m": 21.78,
       "time_s": 643.81
     },
     {
-      "frame_idx": 19320,
-      "track_id": 454,
-      "distance_m": 55.22,
-      "time_s": 644.64
-    },
-    {
       "frame_idx": 19374,
-      "track_id": 456,
+      "track_id": null,
       "distance_m": 6.16,
       "time_s": 646.45
     },
     {
-      "frame_idx": 19395,
-      "track_id": 457,
-      "distance_m": 1.53,
-      "time_s": 647.15
-    },
-    {
-      "frame_idx": 19449,
-      "track_id": 457,
-      "distance_m": 3.32,
-      "time_s": 648.95
-    },
-    {
       "frame_idx": 19472,
-      "track_id": 453,
+      "track_id": null,
       "distance_m": 3.18,
       "time_s": 649.72
     },
     {
       "frame_idx": 19514,
-      "track_id": 453,
+      "track_id": null,
       "distance_m": 5.41,
       "time_s": 651.12
     },
     {
       "frame_idx": 19557,
-      "track_id": 458,
+      "track_id": null,
       "distance_m": 7.51,
       "time_s": 652.55
-    },
-    {
-      "frame_idx": 19605,
-      "track_id": 470,
-      "distance_m": 6.48,
-      "time_s": 654.15
     },
     {
       "frame_idx": 19624,
@@ -1181,7 +743,7 @@
     },
     {
       "frame_idx": 19894,
-      "track_id": 485,
+      "track_id": null,
       "distance_m": 9.19,
       "time_s": 663.8
     },
@@ -1198,82 +760,40 @@
       "time_s": 665.97
     },
     {
-      "frame_idx": 20015,
-      "track_id": 499,
-      "distance_m": 195.25,
-      "time_s": 667.83
-    },
-    {
       "frame_idx": 20068,
-      "track_id": 492,
+      "track_id": null,
       "distance_m": 5.07,
       "time_s": 669.6
     },
     {
       "frame_idx": 20086,
-      "track_id": 492,
+      "track_id": null,
       "distance_m": 13.79,
       "time_s": 670.2
     },
     {
       "frame_idx": 20120,
-      "track_id": 499,
+      "track_id": null,
       "distance_m": 5.06,
       "time_s": 671.34
     },
     {
       "frame_idx": 20144,
-      "track_id": 505,
+      "track_id": null,
       "distance_m": 6.36,
       "time_s": 672.14
     },
     {
-      "frame_idx": 20233,
-      "track_id": 513,
-      "distance_m": 4.37,
-      "time_s": 675.11
-    },
-    {
-      "frame_idx": 20241,
-      "track_id": 513,
-      "distance_m": 6.75,
-      "time_s": 675.37
-    },
-    {
       "frame_idx": 20267,
-      "track_id": 519,
+      "track_id": null,
       "distance_m": 16.33,
       "time_s": 676.24
     },
     {
-      "frame_idx": 20434,
-      "track_id": 525,
-      "distance_m": 12.24,
-      "time_s": 681.81
-    },
-    {
-      "frame_idx": 20461,
-      "track_id": 530,
-      "distance_m": 8180.27,
-      "time_s": 682.72
-    },
-    {
-      "frame_idx": 20488,
-      "track_id": 534,
-      "distance_m": 9.35,
-      "time_s": 683.62
-    },
-    {
       "frame_idx": 20501,
-      "track_id": 533,
+      "track_id": null,
       "distance_m": 10.28,
       "time_s": 684.05
-    },
-    {
-      "frame_idx": 20553,
-      "track_id": 539,
-      "distance_m": 22.28,
-      "time_s": 685.79
     },
     {
       "frame_idx": 20565,
@@ -1289,25 +809,13 @@
     },
     {
       "frame_idx": 20820,
-      "track_id": 551,
+      "track_id": null,
       "distance_m": 11.26,
       "time_s": 694.69
     },
     {
-      "frame_idx": 20849,
-      "track_id": 549,
-      "distance_m": 4.23,
-      "time_s": 695.66
-    },
-    {
-      "frame_idx": 20866,
-      "track_id": 557,
-      "distance_m": 2.59,
-      "time_s": 696.23
-    },
-    {
       "frame_idx": 20889,
-      "track_id": 562,
+      "track_id": null,
       "distance_m": 4.29,
       "time_s": 697.0
     }
