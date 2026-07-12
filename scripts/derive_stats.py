@@ -60,6 +60,18 @@ MAX_TOUCH_ATTRIBUTION_DISTANCE_PX = 150.0
 # obvious background noise.
 RAW_DETECTION_VETO_MIN_CONF = 0.15
 
+# The raw per-frame detector output is NOT deduplicated the way a single inference
+# call's NMS would - the cached CSV keeps every detection down to its own low floor
+# (see detect_video.py), so a single real player routinely shows up as several
+# overlapping boxes at different confidences (verified on real footage: a tracked
+# player at conf 0.452 had near-duplicate raw boxes at 0.189 and 0.11 covering almost
+# the same region). Without deduplication, the veto above fired on these duplicates
+# of the player *already, correctly* tracked - not on a genuinely different, unseen
+# person - which is why it started rejecting attributions that were previously
+# confirmed correct. A raw box this overlapped with an already-tracked box in the same
+# frame is the same physical player, not new evidence.
+RAW_DETECTION_DEDUP_IOU = 0.3
+
 # Regulation: the attack line sits 3m from the net, not 3m from the baseline. Kept as
 # an independent constant rather than reusing calibrate.py's ATTACK_LINE_M, which is
 # measured from the baseline there (used only for that file's visual overlay) - using
@@ -272,6 +284,19 @@ def frames_within_rallies(rallies: list[Rally]) -> set[int]:
     return frames
 
 
+def iou(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> float:
+    """Intersection-over-union of two boxes, 0.0 if they don't overlap."""
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ix1, iy1 = max(ax1, bx1), max(ay1, by1)
+    ix2, iy2 = min(ax2, bx2), min(ay2, by2)
+    inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+    area_a = (ax2 - ax1) * (ay2 - ay1)
+    area_b = (bx2 - bx1) * (by2 - by1)
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
 def distance_point_to_box(point: tuple[float, float], box: tuple[float, float, float, float]) -> float:
     """Euclidean distance from a point to the nearest point on a bbox - 0 if the point
     falls inside the box. Used (see find_nearest_player_by_box) instead of point-to-
@@ -477,13 +502,15 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
     }
     # Raw (untracked) per-frame player detections, for attribute_touches's veto check -
     # see its docstring for why a tracked candidate isn't always trustworthy on its own.
-    raw_player_boxes_px = {
-        frame_idx: [
+    raw_player_boxes_px = {}
+    for frame_idx in in_play_contacts:
+        tracked_boxes_this_frame = list(player_boxes_px_by_frame.get(frame_idx, {}).values())
+        raw_player_boxes_px[frame_idx] = [
             box[:4] for box in per_frame.get(frame_idx, {"player": []})["player"]
-            if box[4] >= RAW_DETECTION_VETO_MIN_CONF and not in_referee_zone(player_foot_point(box[:4]))
+            if box[4] >= RAW_DETECTION_VETO_MIN_CONF
+            and not in_referee_zone(player_foot_point(box[:4]))
+            and not any(iou(box[:4], tracked) > RAW_DETECTION_DEDUP_IOU for tracked in tracked_boxes_this_frame)
         ]
-        for frame_idx in in_play_contacts
-    }
     ball_positions_px = {f: (cx, cy) for f, (cx, cy, _interp) in ball_by_frame.items()}
     touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_boxes_px, raw_player_boxes_px)
     zone_occupancy = compute_zone_occupancy(in_play_player_positions)

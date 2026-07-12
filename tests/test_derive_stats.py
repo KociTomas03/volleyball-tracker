@@ -13,6 +13,7 @@ from derive_stats import (
     find_nearest_player_by_box,
     frames_within_rallies,
     in_referee_zone,
+    iou,
     player_foot_point,
     segment_rallies,
     stationary_track_ids,
@@ -211,6 +212,19 @@ def test_frames_within_rallies_multiple_non_overlapping_rallies():
 
 
 # --- touch attribution ---
+
+def test_iou_identical_boxes_is_one():
+    assert iou((0.0, 0.0, 10.0, 10.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(1.0)
+
+
+def test_iou_disjoint_boxes_is_zero():
+    assert iou((0.0, 0.0, 10.0, 10.0), (20.0, 20.0, 30.0, 30.0)) == 0.0
+
+
+def test_iou_partial_overlap():
+    # Two 10x10 boxes overlapping in a 5x10 region: intersection=50, union=150.
+    assert iou((0.0, 0.0, 10.0, 10.0), (5.0, 0.0, 15.0, 10.0)) == pytest.approx(50 / 150)
+
 
 def test_distance_point_to_box_is_zero_inside_box():
     assert distance_point_to_box((5.0, 5.0), (0.0, 0.0, 10.0, 10.0)) == 0.0
