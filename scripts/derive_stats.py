@@ -70,6 +70,27 @@ FRONT_ZONE_DEPTH_M = 3.0
 STATIONARY_MIN_FRAMES = 150  # ~5s at ~30fps
 STATIONARY_MAX_EXTENT_PX = 150.0  # well above the referee's 59px, well below any real player's 300px+
 
+# Camera/clip-specific (SLAP_SVIT_1z_upr, 1920x1080), same spirit as the constants
+# above: the elevated referee stand at the net post sits at a fixed screen position -
+# measured directly from three long-lived tracks that all landed there (track ids 6,
+# 156, 401: x1 in [1005,1028], y1 in [253,287], x2 in [1060,1087], y2 in [353,429]
+# across 800-3800 frames each), padded with margin. This exists because
+# stationary_track_ids alone isn't fast enough: ByteTrack reassigns the referee a new
+# track id every time it briefly loses them (18+ distinct excluded ids were observed
+# in one 9000-frame slice), and each new id needs STATIONARY_MIN_FRAMES of stillness
+# before that filter catches it - leaving a recurring window where a touch mid-net-
+# play gets attributed to the referee instead of the real player. A fixed-position
+# check has no such warm-up, since it's evaluated fresh per frame. Not used for
+# stationary_track_ids itself (which is a different, camera-independent mechanism);
+# only for excluding position data from touch attribution / zone occupancy.
+REFEREE_ZONE_PX = (990.0, 240.0, 1100.0, 440.0)  # x1, y1, x2, y2
+
+
+def in_referee_zone(point_px: tuple[float, float], zone: tuple[float, float, float, float] = REFEREE_ZONE_PX) -> bool:
+    x, y = point_px
+    x1, y1, x2, y2 = zone
+    return x1 <= x <= x2 and y1 <= y <= y2
+
 
 def within_court_bounds(point_court: tuple[float, float], margin_m: float = OUT_OF_BOUNDS_MARGIN_M) -> bool:
     """True if a court-space point falls within the court, padded by `margin_m`.
@@ -233,11 +254,23 @@ def frames_within_rallies(rallies: list[Rally]) -> set[int]:
     return frames
 
 
-def find_nearest_player(point: tuple[float, float],
-                         candidates: dict[int, tuple[float, float]]) -> tuple[int, float] | None:
+def distance_point_to_box(point: tuple[float, float], box: tuple[float, float, float, float]) -> float:
+    """Euclidean distance from a point to the nearest point on a bbox - 0 if the point
+    falls inside the box. Used (see find_nearest_player_by_box) instead of point-to-
+    point distance for touch attribution, since a single representative point on a
+    player (e.g. their foot) can be far from where they actually contact the ball."""
+    px, py = point
+    x1, y1, x2, y2 = box
+    dx = max(x1 - px, 0.0, px - x2)
+    dy = max(y1 - py, 0.0, py - y2)
+    return math.hypot(dx, dy)
+
+
+def find_nearest_player_by_box(point: tuple[float, float],
+                                candidates: dict[int, tuple[float, float, float, float]]) -> tuple[int, float] | None:
     if not candidates:
         return None
-    return min(((tid, math.dist(point, pos)) for tid, pos in candidates.items()), key=lambda t: t[1])
+    return min(((tid, distance_point_to_box(point, box)) for tid, box in candidates.items()), key=lambda t: t[1])
 
 
 @dataclass
@@ -248,22 +281,31 @@ class Touch:
 
 
 def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[float, float]],
-                       player_positions_px_by_frame: dict[int, dict[int, tuple[float, float]]],
+                       player_boxes_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]],
                        max_distance_px: float = MAX_TOUCH_ATTRIBUTION_DISTANCE_PX) -> list[Touch]:
-    """For each contact frame, attribute the touch to whichever tracked player's foot
-    point is nearest the ball in PIXEL space at that frame - but only if that nearest
-    player is within `max_distance_px`.
+    """For each contact frame, attribute the touch to whichever tracked player's full
+    bounding box is nearest the ball in PIXEL space at that frame - but only if that
+    nearest player is within `max_distance_px`.
 
-    Deliberately pixel space, not court space: verified on real footage (SLAP_SVIT_1z_upr)
-    that court-space nearest-player is unreliable near the net specifically, because the
-    ball is airborne at contact height and the homography only maps the ground plane - an
-    elevated ball's ground-plane reprojection can land closer to an uninvolved player than
-    to the real toucher jumping directly beneath it. Pixel-space distance reflects visual
-    proximity directly and doesn't have this height-reprojection distortion. (A separate,
-    still-unresolved failure mode: a contact frame where the true toucher isn't tracked at
-    all - diving pose, frame edge - or where find_ball_contacts flags the ball resting/
-    rolling after a point ends as a spurious contact; pixel space narrows but doesn't fully
-    close this, since a nearby uninvolved player can still pass the distance cutoff.)
+    Deliberately the player's full box, not a single foot/center point: verified on
+    real footage (SLAP_SVIT_1z_upr) that a foot-point proxy is systematically wrong
+    during jumps and overhead reaches, since the actual contact happens at the hands,
+    which can be a meter or more from the feet in image space (a jumping player's feet
+    lift toward the ball while a standing toucher's raised arms move away from their
+    planted feet) - this was the single largest source of misattribution found in a
+    16-touch manual audit. Comparing against the whole box means the ball only needs
+    to be near *some part* of the player, not a specific point on them.
+
+    Deliberately pixel space, not court space: court-space nearest-player is unreliable
+    near the net specifically, because the ball is airborne at contact height and the
+    homography only maps the ground plane - an elevated ball's ground-plane reprojection
+    can land closer to an uninvolved player than to the real toucher jumping directly
+    beneath it. Pixel-space distance reflects visual proximity directly and doesn't have
+    this height-reprojection distortion. (A separate, still-unresolved failure mode: a
+    contact frame where the true toucher isn't tracked at all - diving pose, frame edge -
+    or where find_ball_contacts flags the ball resting/rolling after a point ends as a
+    spurious contact; pixel space narrows but doesn't fully close this, since a nearby
+    uninvolved player can still pass the distance cutoff.)
 
     Falls back to an unattributed touch (track_id=None) if no player is tracked that
     frame, the nearest one is implausibly far, or the ball itself has no position there -
@@ -274,7 +316,7 @@ def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[fl
         ball_pos = ball_positions_px.get(frame_idx)
         if ball_pos is None:
             continue
-        nearest = find_nearest_player(ball_pos, player_positions_px_by_frame.get(frame_idx, {}))
+        nearest = find_nearest_player_by_box(ball_pos, player_boxes_px_by_frame.get(frame_idx, {}))
         if nearest is None:
             touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=None))
             continue
@@ -348,17 +390,26 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         f: pixel_to_court((cx, cy), homography) for f, (cx, cy, _interp) in ball_by_frame.items()
     }
     foot_px_by_frame: dict[int, dict[int, tuple[float, float]]] = {}
+    box_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]] = {}
     player_positions_court_by_frame: dict[int, dict[int, tuple[float, float]]] = {}
     for frame_idx, dets in frame_players.items():
-        feet, players = {}, {}
-        for box, track_id in zip(dets.xyxy, dets.tracker_id):
+        feet, boxes, players = {}, {}, {}
+        for raw_box, track_id in zip(dets.xyxy, dets.tracker_id):
             track_id = int(track_id)
-            foot_px = player_foot_point(tuple(float(v) for v in box))
+            box = tuple(float(v) for v in raw_box)
+            foot_px = player_foot_point(box)
+            # Excluded here (per-frame, position-based), not just via stationary_ids
+            # below - see REFEREE_ZONE_PX for why a track-id-history-based check alone
+            # isn't fast enough to catch the referee after ByteTrack reassigns their id.
+            if in_referee_zone(foot_px):
+                continue
             feet[track_id] = foot_px
+            boxes[track_id] = box
             court_pos = pixel_to_court(foot_px, homography)
             if within_court_bounds(court_pos):
                 players[track_id] = court_pos
         foot_px_by_frame[frame_idx] = feet
+        box_px_by_frame[frame_idx] = boxes
         player_positions_court_by_frame[frame_idx] = players
 
     stationary_ids = stationary_track_ids(foot_px_by_frame)
@@ -366,13 +417,13 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         frame_idx: {tid: pos for tid, pos in players.items() if tid not in stationary_ids}
         for frame_idx, players in player_positions_court_by_frame.items()
     }
-    # Pixel-space counterpart for touch attribution (see attribute_touches) - unlike the
-    # court-space dict above, this is NOT filtered by within_court_bounds, since a bad
-    # homography reprojection for a given player shouldn't disqualify their (perfectly
-    # valid) pixel position from being compared against the ball's pixel position.
-    player_positions_px_by_frame = {
-        frame_idx: {tid: pos for tid, pos in feet.items() if tid not in stationary_ids}
-        for frame_idx, feet in foot_px_by_frame.items()
+    # Pixel-space box counterpart for touch attribution (see attribute_touches) - unlike
+    # the court-space dict above, this is NOT filtered by within_court_bounds, since a
+    # bad homography reprojection for a given player shouldn't disqualify their
+    # (perfectly valid) pixel box from being compared against the ball's pixel position.
+    player_boxes_px_by_frame = {
+        frame_idx: {tid: box for tid, box in boxes.items() if tid not in stationary_ids}
+        for frame_idx, boxes in box_px_by_frame.items()
     }
 
     contacts = find_ball_contacts(ball_y_px_by_frame)
@@ -390,12 +441,12 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         frame_idx: players for frame_idx, players in player_positions_court_by_frame.items()
         if frame_idx in in_play_frames
     }
-    in_play_player_positions_px = {
-        frame_idx: players for frame_idx, players in player_positions_px_by_frame.items()
+    in_play_player_boxes_px = {
+        frame_idx: boxes for frame_idx, boxes in player_boxes_px_by_frame.items()
         if frame_idx in in_play_frames
     }
     ball_positions_px = {f: (cx, cy) for f, (cx, cy, _interp) in ball_by_frame.items()}
-    touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_positions_px)
+    touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_boxes_px)
     zone_occupancy = compute_zone_occupancy(in_play_player_positions)
 
     return {

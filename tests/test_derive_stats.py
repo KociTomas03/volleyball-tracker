@@ -2,14 +2,17 @@ import pytest
 
 from calibrate import COURT_LENGTH_M, COURT_WIDTH_M, NET_Y_M
 from derive_stats import (
+    REFEREE_ZONE_PX,
     Rally,
     Touch,
     attribute_touches,
     compute_zone_occupancy,
     detect_net_crossings,
+    distance_point_to_box,
     find_ball_contacts,
-    find_nearest_player,
+    find_nearest_player_by_box,
     frames_within_rallies,
+    in_referee_zone,
     player_foot_point,
     segment_rallies,
     stationary_track_ids,
@@ -184,22 +187,36 @@ def test_frames_within_rallies_multiple_non_overlapping_rallies():
 
 # --- touch attribution ---
 
-def test_find_nearest_player_picks_closest():
-    candidates = {1: (0.0, 0.0), 2: (0.8, 0.0), 3: (5.0, 5.0)}
-    assert find_nearest_player((0.5, 0.0), candidates) == (2, pytest.approx(0.3))
+def test_distance_point_to_box_is_zero_inside_box():
+    assert distance_point_to_box((5.0, 5.0), (0.0, 0.0, 10.0, 10.0)) == 0.0
 
 
-def test_find_nearest_player_empty_candidates_returns_none():
-    assert find_nearest_player((0.0, 0.0), {}) is None
+def test_distance_point_to_box_measures_to_nearest_edge():
+    # Point is directly above the box, 3 units clear of its top edge.
+    assert distance_point_to_box((5.0, -3.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(3.0)
+
+
+def test_distance_point_to_box_measures_to_nearest_corner():
+    assert distance_point_to_box((13.0, -4.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(5.0)
+
+
+def test_find_nearest_player_by_box_picks_closest():
+    candidates = {1: (0.0, 0.0, 1.0, 1.0), 2: (0.8, 0.0, 1.8, 1.0), 3: (5.0, 5.0, 6.0, 6.0)}
+    tid, dist = find_nearest_player_by_box((0.5, 0.5), candidates)
+    assert tid == 1 and dist == pytest.approx(0.0)
+
+
+def test_find_nearest_player_by_box_empty_candidates_returns_none():
+    assert find_nearest_player_by_box((0.0, 0.0), {}) is None
 
 
 def test_attribute_touches_matches_nearest_player_per_frame():
     ball_positions = {10: (1.0, 1.0), 20: (5.0, 5.0)}
-    players_by_frame = {
-        10: {1: (1.1, 1.0), 2: (9.0, 9.0)},
-        20: {1: (1.1, 1.0), 2: (5.1, 5.0)},
+    player_boxes_by_frame = {
+        10: {1: (1.0, 1.0, 1.2, 1.2), 2: (9.0, 9.0, 9.2, 9.2)},
+        20: {1: (1.0, 1.0, 1.2, 1.2), 2: (5.0, 5.0, 5.2, 5.2)},
     }
-    touches = attribute_touches([10, 20], ball_positions, players_by_frame)
+    touches = attribute_touches([10, 20], ball_positions, player_boxes_by_frame)
     assert touches[0].frame_idx == 10 and touches[0].track_id == 1
     assert touches[1].frame_idx == 20 and touches[1].track_id == 2
 
@@ -211,25 +228,46 @@ def test_attribute_touches_no_players_tracked_is_unattributed():
 
 
 def test_attribute_touches_skips_contact_with_no_ball_position():
-    touches = attribute_touches([10], {}, {10: {1: (0.0, 0.0)}})
+    touches = attribute_touches([10], {}, {10: {1: (0.0, 0.0, 0.0, 0.0)}})
     assert touches == []
 
 
 def test_attribute_touches_rejects_implausibly_distant_nearest_player():
-    # Nearest tracked player is 200px away - a spurious contact (e.g. dead-ball ball roll)
-    # or a real touch whose actual toucher wasn't tracked that frame, not a real touch by
-    # this distant player.
+    # Nearest tracked player's box is 200px away - a spurious contact (e.g. dead-ball
+    # ball roll) or a real touch whose actual toucher wasn't tracked that frame, not a
+    # real touch by this distant player.
     ball_positions = {10: (0.0, 0.0)}
-    players = {10: {1: (200.0, 0.0)}}
+    players = {10: {1: (200.0, 0.0, 200.0, 0.0)}}
     touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
     assert touches == [Touch(frame_idx=10, track_id=None, distance_px=200.0)]
 
 
 def test_attribute_touches_accepts_nearest_player_within_max_distance():
     ball_positions = {10: (0.0, 0.0)}
-    players = {10: {1: (50.0, 0.0)}}
+    players = {10: {1: (50.0, 0.0, 50.0, 0.0)}}
     touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
     assert touches == [Touch(frame_idx=10, track_id=1, distance_px=50.0)]
+
+
+def test_attribute_touches_uses_full_box_not_just_a_single_point():
+    # Ball sits inside the player's box (e.g. near their raised hands, far from their
+    # foot point) - should attribute even though the box's bottom-center is far away.
+    ball_positions = {10: (5.0, 2.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 20.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_px=0.0)]
+
+
+# --- referee zone exclusion ---
+
+def test_in_referee_zone_true_inside_zone():
+    x1, y1, x2, y2 = REFEREE_ZONE_PX
+    center = ((x1 + x2) / 2, (y1 + y2) / 2)
+    assert in_referee_zone(center) is True
+
+
+def test_in_referee_zone_false_outside_zone():
+    assert in_referee_zone((0.0, 0.0)) is False
 
 
 # --- zone bucketing ---
