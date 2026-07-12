@@ -12,7 +12,7 @@ import cv2
 from ultralytics import YOLO
 
 PLAYER_MODEL_PATH = "models/yolov8n.pt"
-BALL_MODEL_PATH = "models/ball_yolov8n_v3.pt"
+BALL_MODEL_PATH = "models/ball_yolov8n_v4.pt"
 PLAYER_CONF = 0.4
 BALL_CONF = 0.25
 COCO_PERSON_CLASS = 0
