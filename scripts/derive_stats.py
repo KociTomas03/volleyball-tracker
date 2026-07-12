@@ -49,6 +49,17 @@ OUT_OF_BOUNDS_MARGIN_M = 3.0  # ball beyond court+this margin is treated as "out
 # (250px+) seen in the untracked-toucher/off-frame cases.
 MAX_TOUCH_ATTRIBUTION_DISTANCE_PX = 150.0
 
+# User-reported wrong attributions on real footage (SLAP_SVIT_1z_upr) traced to the
+# same root cause 2 of 3 times: the true toucher WAS seen by the raw YOLO detector
+# (0.221-0.435 confidence, right at the ball) but never became an available track -
+# either below ByteTrack's track_activation_threshold (PLAYER_CONF=0.4), or above it
+# but not yet confirmed by minimum_consecutive_frames (see track_players) during the
+# fast, blur-prone motion of a jump/spike. attribute_touches then fell back to
+# whichever OTHER, unrelated tracked player was nearest, producing a confident wrong
+# answer. 0.15 sits below both observed cases (0.221, 0.303) while staying well above
+# obvious background noise.
+RAW_DETECTION_VETO_MIN_CONF = 0.15
+
 # Regulation: the attack line sits 3m from the net, not 3m from the baseline. Kept as
 # an independent constant rather than reusing calibrate.py's ATTACK_LINE_M, which is
 # measured from the baseline there (used only for that file's visual overlay) - using
@@ -289,6 +300,7 @@ class Touch:
 
 def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[float, float]],
                        player_boxes_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]],
+                       raw_player_boxes_px_by_frame: dict[int, list[tuple[float, float, float, float]]] | None = None,
                        max_distance_px: float = MAX_TOUCH_ATTRIBUTION_DISTANCE_PX) -> list[Touch]:
     """For each contact frame, attribute the touch to whichever tracked player's full
     bounding box is nearest the ball in PIXEL space at that frame - but only if that
@@ -308,16 +320,23 @@ def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[fl
     homography only maps the ground plane - an elevated ball's ground-plane reprojection
     can land closer to an uninvolved player than to the real toucher jumping directly
     beneath it. Pixel-space distance reflects visual proximity directly and doesn't have
-    this height-reprojection distortion. (A separate, still-unresolved failure mode: a
-    contact frame where the true toucher isn't tracked at all - diving pose, frame edge -
-    or where find_ball_contacts flags the ball resting/rolling after a point ends as a
-    spurious contact; pixel space narrows but doesn't fully close this, since a nearby
-    uninvolved player can still pass the distance cutoff.)
+    this height-reprojection distortion.
+
+    If `raw_player_boxes_px_by_frame` is given, a tracked candidate that would otherwise
+    be accepted is vetoed (downgraded to unattributed) when an untracked raw detection
+    sits strictly closer to the ball than the tracked candidate. This exists because
+    user-reported wrong attributions on real footage traced back to the true toucher
+    being seen by the raw detector but never becoming an available *track* (below
+    ByteTrack's activation threshold, or not yet confirmed) during the fast, blur-prone
+    motion of a jump/spike - attribution then confidently named a different, unrelated
+    tracked player instead. We can't name who the untracked detection is (no track id),
+    but its mere existence closer to the ball is enough to know the tracked candidate
+    probably isn't the real toucher, so unattributed is the honest answer.
 
     Falls back to an unattributed touch (track_id=None) if no player is tracked that
-    frame, the nearest one is implausibly far, or the ball itself has no position there -
-    a documented limitation, same shape as this project's other accepted tracking-
-    limitation tradeoffs."""
+    frame, the nearest one is implausibly far or vetoed, or the ball itself has no
+    position there - a documented limitation, same shape as this project's other
+    accepted tracking-limitation tradeoffs."""
     touches = []
     for frame_idx in contacts:
         ball_pos = ball_positions_px.get(frame_idx)
@@ -329,6 +348,10 @@ def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[fl
             continue
         track_id, dist = nearest
         if dist > max_distance_px:
+            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=dist))
+            continue
+        raw_boxes = (raw_player_boxes_px_by_frame or {}).get(frame_idx, [])
+        if raw_boxes and min(distance_point_to_box(ball_pos, b) for b in raw_boxes) < dist:
             touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=dist))
         else:
             touches.append(Touch(frame_idx=frame_idx, track_id=track_id, distance_px=dist))
@@ -452,8 +475,17 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         frame_idx: boxes for frame_idx, boxes in player_boxes_px_by_frame.items()
         if frame_idx in in_play_frames
     }
+    # Raw (untracked) per-frame player detections, for attribute_touches's veto check -
+    # see its docstring for why a tracked candidate isn't always trustworthy on its own.
+    raw_player_boxes_px = {
+        frame_idx: [
+            box[:4] for box in per_frame.get(frame_idx, {"player": []})["player"]
+            if box[4] >= RAW_DETECTION_VETO_MIN_CONF and not in_referee_zone(player_foot_point(box[:4]))
+        ]
+        for frame_idx in in_play_contacts
+    }
     ball_positions_px = {f: (cx, cy) for f, (cx, cy, _interp) in ball_by_frame.items()}
-    touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_boxes_px)
+    touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_boxes_px, raw_player_boxes_px)
     zone_occupancy = compute_zone_occupancy(in_play_player_positions)
 
     return {

@@ -283,6 +283,36 @@ def test_attribute_touches_uses_full_box_not_just_a_single_point():
     assert touches == [Touch(frame_idx=10, track_id=1, distance_px=0.0)]
 
 
+def test_attribute_touches_vetoes_tracked_candidate_when_raw_detection_is_closer():
+    # A tracked player passes the distance cutoff, but an untracked raw detection (the
+    # true toucher, never confirmed into a track - e.g. mid-jump motion blur) sits
+    # right on the ball. Should defer to unattributed rather than confidently naming
+    # the tracked-but-wrong player.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}  # tracked candidate, ~127px away
+    raw_boxes = {10: [(95.0, 95.0, 105.0, 105.0)]}  # untracked, right on the ball
+    touches = attribute_touches([10], ball_positions, players, raw_boxes, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_px=pytest.approx(127.28, rel=1e-3))]
+
+
+def test_attribute_touches_keeps_tracked_candidate_when_it_is_the_closest_raw_detection_too():
+    # The tracked candidate's own raw detection is (unsurprisingly) part of the raw
+    # set too - it shouldn't veto itself.
+    ball_positions = {10: (5.0, 5.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}
+    raw_boxes = {10: [(0.0, 0.0, 10.0, 10.0), (200.0, 200.0, 210.0, 210.0)]}
+    touches = attribute_touches([10], ball_positions, players, raw_boxes, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_px=0.0)]
+
+
+def test_attribute_touches_no_veto_without_raw_boxes_argument():
+    # Backwards compatible: omitting raw_player_boxes_px_by_frame skips the veto check.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches[0].track_id == 1
+
+
 # --- referee zone exclusion ---
 
 def test_in_referee_zone_true_inside_zone():
