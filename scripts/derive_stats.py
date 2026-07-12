@@ -147,19 +147,25 @@ def stationary_track_ids(foot_px_by_frame: dict[int, dict[int, tuple[float, floa
 
 def find_ball_contacts(ball_y_by_frame: dict[int, float], window: int = CONTACT_WINDOW_FRAMES,
                         min_excursion_px: float = CONTACT_MIN_EXCURSION_PX) -> list[int]:
-    """Local maxima of the ball's *pixel*-y position - screen-down is physically low,
-    so a local max in pixel-y is a local minimum in height, i.e. plan.md's literal
-    "local minimum in the ball's height trajectory" heuristic for an approximate
-    contact point. Pixel space is deliberate: the homography only maps the ground
-    plane, and the ball isn't on the ground at contact height, so there's no
-    calibrated "height" available to use instead.
+    """Local extrema (maxima OR minima) of the ball's *pixel*-y position - screen-down
+    is physically low, so either direction is a real contact: a local MAX in pixel-y is
+    a local minimum in height (ball near the floor reversing from falling to rising - a
+    serve-receive, dig, or pass), while a local MIN in pixel-y is a local maximum in
+    height (ball near the top of its arc reversing from rising to falling, or smashed
+    sharply downward - a set, attack, or block). Originally only the maxima case was
+    implemented; verified on real footage (SLAP_SVIT_1z_upr, plotting the trajectory
+    against detected contacts) that this meant every contact near the top of the ball's
+    arc - roughly half of all real touches in a rally - was structurally undetectable,
+    regardless of any threshold tuning. Pixel space is deliberate: the homography only
+    maps the ground plane, and the ball isn't on the ground at contact height, so
+    there's no calibrated "height" available to use instead.
 
-    A frame is a contact if it's the (first, in case of a tie) maximum within a
+    A frame is a contact if it's the (first, in case of a tie) extremum within a
     +/-`window`-frame neighborhood and that neighborhood has at least
-    `min_excursion_px` of vertical range - both gate out jitter-driven maxima. The
+    `min_excursion_px` of vertical range - both gate out jitter-driven extrema. The
     window requirement also enforces a natural minimum separation between distinct
-    contacts, since a second peak within `window` frames of a taller one can't itself
-    be the window-max."""
+    contacts, since a second extremum within `window` frames of a more extreme one
+    can't itself be the window's max or min."""
     frames = sorted(ball_y_by_frame)
     frame_set = set(frames)
     contacts: list[int] = []
@@ -169,12 +175,13 @@ def find_ball_contacts(ball_y_by_frame: dict[int, float], window: int = CONTACT_
             continue
         values = [ball_y_by_frame[wf] for wf in neighborhood]
         y = ball_y_by_frame[f]
-        if y != max(values):
+        y_max, y_min = max(values), min(values)
+        if y != y_max and y != y_min:
             continue
-        if y - min(values) < min_excursion_px:
+        if y_max - y_min < min_excursion_px:
             continue
         if any(ball_y_by_frame[wf] == y and wf < f for wf in neighborhood):
-            continue  # keep only the first frame of a flat plateau at the max
+            continue  # keep only the first frame of a flat plateau at this extremum
         contacts.append(f)
     return contacts
 

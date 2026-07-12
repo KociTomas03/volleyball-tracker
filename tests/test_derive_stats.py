@@ -55,10 +55,35 @@ def _parabola_y(center: int, width: int, peak: float) -> dict[int, float]:
     return {f: peak - (f - center) ** 2 for f in range(center - width, center + width + 1)}
 
 
+def _valley_y(center: int, width: int, trough: float) -> dict[int, float]:
+    """Synthetic ball trajectory: pixel-y dips to `trough` at `center` (screen-high =
+    physically high = a contact near the top of the ball's arc, e.g. a set or attack)
+    and rises off on both sides."""
+    return {f: trough + (f - center) ** 2 for f in range(center - width, center + width + 1)}
+
+
 def test_find_ball_contacts_detects_single_peak():
     y_by_frame = _parabola_y(center=20, width=10, peak=100.0)
     contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
     assert contacts == [20]
+
+
+def test_find_ball_contacts_detects_single_valley():
+    # A local minimum (ball near the top of its arc) must be detected too, not just
+    # maxima - this is the set/attack/block case, distinct from the dig/pass case above.
+    y_by_frame = _valley_y(center=20, width=10, trough=0.0)
+    contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    assert contacts == [20]
+
+
+def test_find_ball_contacts_detects_both_peak_and_valley_in_sequence():
+    # A realistic rally fragment: ball dips low (reception), rises to a high point
+    # (set/attack), far enough apart that both extrema get their own full window.
+    y_by_frame = {}
+    y_by_frame.update(_parabola_y(center=10, width=8, peak=100.0))
+    y_by_frame.update(_valley_y(center=40, width=8, trough=0.0))
+    contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    assert contacts == [10, 40]
 
 
 def test_find_ball_contacts_ignores_small_jitter():
