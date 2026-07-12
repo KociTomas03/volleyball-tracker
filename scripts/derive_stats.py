@@ -214,6 +214,17 @@ def segment_rallies(ball_court_positions: dict[int, tuple[float, float]], net_cr
     return rallies
 
 
+def frames_within_rallies(rallies: list[Rally]) -> set[int]:
+    """All frame indices covered by any rally's [start_frame, end_frame] range -
+    used to restrict touch attribution and zone occupancy to actual in-play periods,
+    since neither should reflect dead-time noise that segment_rallies already knows
+    how to exclude."""
+    frames: set[int] = set()
+    for r in rallies:
+        frames.update(range(r.start_frame, r.end_frame + 1))
+    return frames
+
+
 def find_nearest_player(point: tuple[float, float],
                          candidates: dict[int, tuple[float, float]]) -> tuple[int, float] | None:
     if not candidates:
@@ -335,8 +346,18 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         ball_positions_court, NET_Y_M, x_bounds=(-NET_CROSSING_X_MARGIN_M, COURT_WIDTH_M + NET_CROSSING_X_MARGIN_M)
     )
     rallies = segment_rallies(ball_positions_court, net_crossings)
-    touches = attribute_touches(contacts, ball_positions_court, player_positions_court_by_frame)
-    zone_occupancy = compute_zone_occupancy(player_positions_court_by_frame)
+
+    # Touches and zone occupancy should only reflect actual in-play periods, not
+    # dead-time noise - segment_rallies already knows how to tell the two apart,
+    # so reuse that instead of computing these stats over the whole processed range.
+    in_play_frames = frames_within_rallies(rallies)
+    in_play_contacts = [f for f in contacts if f in in_play_frames]
+    in_play_player_positions = {
+        frame_idx: players for frame_idx, players in player_positions_court_by_frame.items()
+        if frame_idx in in_play_frames
+    }
+    touches = attribute_touches(in_play_contacts, ball_positions_court, in_play_player_positions)
+    zone_occupancy = compute_zone_occupancy(in_play_player_positions)
 
     return {
         "video": video_path.name,

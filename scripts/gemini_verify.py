@@ -107,7 +107,13 @@ def verify_ball_frames(
     """Batch sweep - safe to point this at a whole flagged set, not just one-off frames.
     Runs concurrently (paid-tier quota has real headroom); per-call backoff (see
     _call_with_backoff) is what keeps this within rate limits, not caller discipline or
-    artificial sequential pacing."""
+    artificial sequential pacing.
+
+    A single frame's failure (e.g. a malformed, non-JSON response for that one image)
+    is recorded as {"error": str(exc)} rather than propagated - letting one bad frame
+    raise out of as_completed() would discard every other already-completed result in
+    the batch, which is a much worse outcome for a "verify a few hundred frames" sweep
+    than just flagging the one frame as unresolved."""
     client = _get_client()
     results: dict[str, dict] = {}
     done = 0
@@ -115,7 +121,10 @@ def verify_ball_frames(
         futures = {pool.submit(verify_ball_frame, path, model, client): path for path in image_paths}
         for future in as_completed(futures):
             path = futures[future]
-            results[path] = future.result()
+            try:
+                results[path] = future.result()
+            except Exception as exc:
+                results[path] = {"error": str(exc)}
             done += 1
             if done % 25 == 0:
                 print(f"  verified {done}/{len(image_paths)}")
