@@ -9,6 +9,7 @@ from derive_stats import (
     detect_net_crossings,
     find_ball_contacts,
     find_nearest_player,
+    frames_within_rallies,
     player_foot_point,
     segment_rallies,
     stationary_track_ids,
@@ -160,6 +161,25 @@ def test_segment_rallies_treats_sustained_out_of_bounds_as_a_gap():
 
 def test_segment_rallies_no_positions_returns_empty():
     assert segment_rallies({}, net_crossings=[], max_dead_gap_frames=10, min_crossings=2) == []
+
+
+# --- frames_within_rallies ---
+
+def test_frames_within_rallies_empty_list_returns_empty_set():
+    assert frames_within_rallies([]) == set()
+
+
+def test_frames_within_rallies_single_rally_covers_full_range():
+    rallies = [Rally(start_frame=10, end_frame=13, net_crossings=2)]
+    assert frames_within_rallies(rallies) == {10, 11, 12, 13}
+
+
+def test_frames_within_rallies_multiple_non_overlapping_rallies():
+    rallies = [
+        Rally(start_frame=0, end_frame=2, net_crossings=2),
+        Rally(start_frame=10, end_frame=11, net_crossings=3),
+    ]
+    assert frames_within_rallies(rallies) == {0, 1, 2, 10, 11}
 
 
 # --- touch attribution ---
