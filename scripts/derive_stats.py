@@ -532,7 +532,7 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
     limit = min(max_frames, total - start_frame) if max_frames else total - start_frame
     frame_indices = range(start_frame, start_frame + limit)
 
-    frame_players = track_players(per_frame, frame_indices, fps)
+    frame_players = track_players(per_frame, frame_indices, fps, video_path)
     ball_states = track_ball_states(per_frame, frame_indices)
     ball_by_frame = interpolate_gaps_ballistic(ball_states, MAX_BALL_GAP_FRAMES)
 

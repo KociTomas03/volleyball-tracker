@@ -1,11 +1,12 @@
 """Track players and the ball across a clip and render an annotated output video.
 
 Reads cached per-frame detections (from detect_video.py, generated automatically
-if missing), tracks players with ByteTrack, tracks the ball with a lightweight
-single-object tracker (see track_ball - ByteTrack's multi-identity confirmation
-logic doesn't suit a single intermittently-detected object), linearly interpolates
-short ball-detection gaps, and renders boxes/IDs/a fading ball trail to an output
-video.
+if missing), tracks players with BoT-SORT + Re-ID (see track_players - plain
+ByteTrack has no appearance signal, so it can't survive the gaps fast/blur-prone
+contact motion produces), tracks the ball with a lightweight single-object tracker
+(see track_ball - neither tracker's multi-identity confirmation logic suits a
+single intermittently-detected object), linearly interpolates short ball-detection
+gaps, and renders boxes/IDs/a fading ball trail to an output video.
 
 Usage:
     python scripts/track_video.py --video data/raw/online_match_01.mp4 --max-frames 500
@@ -21,6 +22,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 import supervision as sv
+import torch
+from boxmot.trackers.bbox.botsort import BotSort
+from boxmot.trackers.registry import _build_reid_model
 
 from ball_kalman import GATE_CHI2, SIGMA_MIN_PX, BallKalmanFilter, innovation, mahalanobis_sq
 from detect_frame import BALL_CONF, PLAYER_CONF
@@ -30,6 +34,33 @@ MAX_BALL_GAP_FRAMES = 15  # interpolate real-detection gaps up to this long; lon
 BALL_MARKER_RADIUS = 8
 BALL_MARKER_COLOR = (0, 165, 255)  # BGR orange
 BALL_TRACK_ID = 0  # constant - track_ball() is single-object, there's no per-segment identity to preserve
+
+# Player tracker: BoT-SORT (via boxmot) with a pretrained Re-ID model, not sv.ByteTrack - see
+# track_players()'s docstring for the full reasoning. osnet_x0_25_msmt17 is boxmot's smallest
+# stock Re-ID checkpoint (auto-downloaded on first use); revisit if appearance matching proves
+# too weak in practice, but there's no real-time constraint pushing toward a smaller model here.
+PLAYER_REID_WEIGHTS = "osnet_x0_25_msmt17.pt"
+# Matches detect_video.py's default CSV floor (--min-conf 0.1) - lets BotSort's low-confidence
+# association stage use weak, blur-degraded detections to keep an EXISTING track alive, without
+# lowering the bar for starting a brand new one (see track_high_thresh in track_players()).
+PLAYER_TRACKER_LOW_CONF = 0.1
+PLAYER_TRACKER_BUFFER = 120  # frames a track survives with zero detections - matches the prior
+                              # sv.ByteTrack(lost_track_buffer=120) this replaces
+
+# Deliberately NOT boxmot's create_tracker(tracker_config=None) default resolution path - that
+# loads botsort.yaml, which isn't a validated tuned baseline, it's a hyperparameter *search
+# space* (each value has type: uniform/randint + a range, meant for boxmot's own evolution
+# tooling) with one arbitrary sample point exposed as "default" (e.g. appearance_thresh~0.62,
+# proximity_thresh~0.61 - both far stricter than the BotSort class's own documented defaults
+# below). Verified on real footage (SLAP_SVIT_1z_upr): using that YAML sample point produced
+# severe track fragmentation (1004 unique player ids over 9000 frames, median track span only
+# 41 frames) - appearance_thresh that strict rejects too many genuine re-identifications.
+# Instantiating BotSort directly with its own class defaults (proximity_thresh=0.5,
+# appearance_thresh=0.25, match_thresh=0.8) cut that to 652 unique ids, median span 92 frames -
+# still worth further empirical tuning, but a large, verified improvement over the YAML sample.
+PLAYER_TRACKER_MATCH_THRESH = 0.8
+PLAYER_TRACKER_PROXIMITY_THRESH = 0.5
+PLAYER_TRACKER_APPEARANCE_THRESH = 0.25
 
 # Empirically derived from consecutive-frame displacement of the highest-confidence ball
 # candidate per frame on a 500-frame slice of online_match_01 (1280x720): p85 was ~80px/frame
@@ -358,27 +389,85 @@ def track_ball_heuristic(per_frame: dict[int, dict[str, list]], frame_indices: r
 
 
 def track_players(per_frame: dict[int, dict[str, list]], frame_indices: range,
-                   fps: float) -> dict[int, sv.Detections]:
-    """Track players with ByteTrack across `frame_indices` (sequential - order matters
-    for ByteTrack's internal state) and return per-frame tracked detections.
+                   fps: float, video_path: Path) -> dict[int, sv.Detections]:
+    """Track players with BoT-SORT (`boxmot`, with a pretrained Re-ID model) across
+    `frame_indices` (sequential - order matters for the tracker's internal state) and return
+    per-frame tracked detections in the same dict[int, sv.Detections] shape prior ByteTrack-based
+    callers already expect.
 
-    Empirically tuned on a 500-frame slice: longer buffer / looser matching kept reducing
-    player ID *count* up to about this point (57 -> 40 -> 32 -> 30 unique ids), then plateaued.
-    That original tuning only ever measured total ID count, not ID *swaps* - a loose
-    minimum_matching_threshold (0.93 = accepts matches down to ~0.07 IoU) is exactly what lets
-    two crossing players' predicted boxes both fall in the same gate and get mismatched, since
-    ByteTrack has no appearance/Re-ID signal to disambiguate them. Tightened to 0.85 (still
-    looser than the 0.8 default) to reduce swap risk while spot-checking that ID count doesn't
-    blow up; minimum_consecutive_frames=2 delays new-track activation by a frame to suppress
-    one-off flicker without touching the matching gate. Revisit with appearance-based Re-ID
-    (see plan) if swaps are still visible at close-player crossings."""
-    player_tracker = sv.ByteTrack(track_activation_threshold=PLAYER_CONF, lost_track_buffer=120,
-                                   minimum_matching_threshold=0.85, minimum_consecutive_frames=2,
-                                   frame_rate=round(fps))
+    Replaced sv.ByteTrack because it has no appearance signal: a track that loses continuous
+    IoU-overlapping detections for even a few frames - exactly what the fast, blur-prone motion
+    of a jump/spike/dive produces - has to start over as a brand-new track once redetected,
+    breaking identity right when it matters most. Verified on real footage (SLAP_SVIT_1z_upr,
+    Phase 5 touch attribution): this was the dominant remaining failure mode - 62% of touches
+    still unattributed after every other Phase 5 fix had no track of anyone within a full 2
+    seconds of the contact, not just a short gap. BoT-SORT's Re-ID re-associates a track through
+    such a gap via appearance similarity instead of requiring continuous detection, at the cost
+    of needing the actual frame image (not just cached boxes) to extract those features - hence
+    the new `video_path` parameter this function didn't need before.
+
+    `track_high_thresh=PLAYER_CONF` keeps the same bar as before for STARTING a new track
+    (avoids spurious tracks from noise); `track_low_thresh=PLAYER_TRACKER_LOW_CONF` is far more
+    permissive and only used to keep an ALREADY-confirmed track alive through a weak-confidence
+    frame - the asymmetry that bridges blur without loosening new-track precision.
+    `use_cmc=False`: these clips use a fixed, non-moving camera, so BoT-SORT's camera-motion-
+    compensation stage (built for handheld/panning footage) has nothing to compensate and is
+    disabled rather than paying its cost for no benefit.
+
+    Prior ByteTrack tuning notes, kept for history since most of these parameters don't map 1:1
+    onto BoT-SORT's own association stages: empirically tuned on a 500-frame slice, longer
+    buffer / looser matching kept reducing player ID *count* up to a point (57 -> 40 -> 32 -> 30
+    unique ids), then plateaued. That original tuning only ever measured total ID count, not ID
+    *swaps* - a loose minimum_matching_threshold (0.93 = accepts matches down to ~0.07 IoU) is
+    exactly what let two crossing players' predicted boxes both fall in the same gate and get
+    mismatched, since ByteTrack had no appearance/Re-ID signal to disambiguate them - the
+    original reason Re-ID was flagged as a future revisit, before the touch-attribution failure
+    mode above independently pointed at the same fix.
+
+    Builds BotSort directly (not via boxmot's create_tracker(tracker_config=None) resolution
+    path) - see PLAYER_TRACKER_MATCH_THRESH's comment for why: that path's default config isn't
+    a tuned baseline, it's an unevolved sample from a hyperparameter search space, and using it
+    caused severe track fragmentation on real footage."""
+    # boxmot's device selection wants a bare index ("0"), not the string "cuda" - passing "cuda"
+    # makes it set CUDA_VISIBLE_DEVICES="cuda" internally, which then breaks its own
+    # torch.cuda.device_count() check and raises.
+    device = "0" if torch.cuda.is_available() else "cpu"
+    reid_model = _build_reid_model(reid_weights=PLAYER_REID_WEIGHTS, device=device, half=False)
+    tracker = BotSort(
+        reid_model=reid_model,
+        track_high_thresh=PLAYER_CONF,
+        track_low_thresh=PLAYER_TRACKER_LOW_CONF,
+        new_track_thresh=PLAYER_CONF,
+        track_buffer=PLAYER_TRACKER_BUFFER,
+        match_thresh=PLAYER_TRACKER_MATCH_THRESH,
+        proximity_thresh=PLAYER_TRACKER_PROXIMITY_THRESH,
+        appearance_thresh=PLAYER_TRACKER_APPEARANCE_THRESH,
+        use_cmc=False,
+        frame_rate=round(fps),
+        with_reid=True,
+    )
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise RuntimeError(f"Could not open video: {video_path}")
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_indices.start)
+
     frame_players: dict[int, sv.Detections] = {}
     for frame_idx in frame_indices:
-        entry = per_frame.get(frame_idx, {"player": [], "ball": []})
-        frame_players[frame_idx] = player_tracker.update_with_detections(to_sv_detections(entry["player"]))
+        ok, frame = cap.read()
+        if not ok:
+            break
+        boxes = per_frame.get(frame_idx, {"player": [], "ball": []})["player"]
+        dets = (np.array([[x1, y1, x2, y2, conf, 0.0] for x1, y1, x2, y2, conf in boxes], dtype=np.float32)
+                if boxes else np.empty((0, 6), dtype=np.float32))
+        result = tracker.update(dets, frame)
+        frame_players[frame_idx] = sv.Detections(
+            xyxy=np.asarray(result.xyxy, dtype=np.float32),
+            confidence=np.asarray(result.conf, dtype=np.float32),
+            class_id=np.zeros(len(result), dtype=int),
+            tracker_id=np.asarray(result.id, dtype=int),
+        )
+    cap.release()
     return frame_players
 
 
@@ -398,7 +487,7 @@ def run_tracking(video_path: Path, detections_csv: Path, out_video_path: Path,
     limit = min(max_frames, total - start_frame) if max_frames else total - start_frame
 
     # --- pass 1: track (sequential, order matters for player ByteTrack state) ---
-    frame_players = track_players(per_frame, range(start_frame, start_frame + limit), fps)
+    frame_players = track_players(per_frame, range(start_frame, start_frame + limit), fps, video_path)
 
     if tracker == "kf":
         ball_states = track_ball_states(per_frame, range(start_frame, start_frame + limit))
