@@ -77,14 +77,14 @@
     },
     {
       "frame_idx": 12150,
-      "track_id": null,
-      "distance_px": 379.1,
+      "track_id": 21,
+      "distance_px": 91.0,
       "time_s": 405.41
     },
     {
       "frame_idx": 12155,
       "track_id": null,
-      "distance_px": 337.0,
+      "distance_px": 310.5,
       "time_s": 405.57
     },
     {
@@ -150,7 +150,7 @@
     {
       "frame_idx": 12409,
       "track_id": null,
-      "distance_px": 245.8,
+      "distance_px": 211.8,
       "time_s": 414.05
     },
     {
@@ -209,8 +209,8 @@
     },
     {
       "frame_idx": 12607,
-      "track_id": null,
-      "distance_px": 200.4,
+      "track_id": 55,
+      "distance_px": 141.7,
       "time_s": 420.65
     },
     {
@@ -221,8 +221,8 @@
     },
     {
       "frame_idx": 12631,
-      "track_id": null,
-      "distance_px": 253.9,
+      "track_id": 45,
+      "distance_px": 92.5,
       "time_s": 421.45
     },
     {
@@ -299,8 +299,8 @@
     },
     {
       "frame_idx": 13055,
-      "track_id": null,
-      "distance_px": 583.7,
+      "track_id": 80,
+      "distance_px": 53.8,
       "time_s": 435.6
     },
     {
@@ -311,8 +311,8 @@
     },
     {
       "frame_idx": 13078,
-      "track_id": null,
-      "distance_px": 190.6,
+      "track_id": 80,
+      "distance_px": 120.3,
       "time_s": 436.37
     },
     {
@@ -348,7 +348,7 @@
     {
       "frame_idx": 13292,
       "track_id": null,
-      "distance_px": 329.1,
+      "distance_px": 326.2,
       "time_s": 443.51
     },
     {
@@ -359,8 +359,8 @@
     },
     {
       "frame_idx": 13331,
-      "track_id": null,
-      "distance_px": 209.8,
+      "track_id": 101,
+      "distance_px": 112.6,
       "time_s": 444.81
     },
     {
@@ -450,13 +450,13 @@
     {
       "frame_idx": 13663,
       "track_id": null,
-      "distance_px": 220.6,
+      "distance_px": 220.3,
       "time_s": 455.89
     },
     {
       "frame_idx": 13685,
-      "track_id": null,
-      "distance_px": 159.1,
+      "track_id": 125,
+      "distance_px": 9.3,
       "time_s": 456.62
     },
     {
@@ -515,8 +515,8 @@
     },
     {
       "frame_idx": 14235,
-      "track_id": null,
-      "distance_px": 339.9,
+      "track_id": 154,
+      "distance_px": 57.7,
       "time_s": 474.97
     },
     {
@@ -527,8 +527,8 @@
     },
     {
       "frame_idx": 14257,
-      "track_id": null,
-      "distance_px": 267.5,
+      "track_id": 154,
+      "distance_px": 29.2,
       "time_s": 475.71
     },
     {
@@ -557,8 +557,8 @@
     },
     {
       "frame_idx": 14329,
-      "track_id": null,
-      "distance_px": 207.2,
+      "track_id": 159,
+      "distance_px": 5.4,
       "time_s": 478.11
     },
     {
@@ -648,7 +648,7 @@
     {
       "frame_idx": 14600,
       "track_id": null,
-      "distance_px": 337.4,
+      "distance_px": 216.4,
       "time_s": 487.15
     },
     {
@@ -660,25 +660,25 @@
     {
       "frame_idx": 14616,
       "track_id": null,
-      "distance_px": 295.5,
+      "distance_px": 195.5,
       "time_s": 487.69
     },
     {
       "frame_idx": 14639,
-      "track_id": null,
-      "distance_px": 404.7,
+      "track_id": 188,
+      "distance_px": 0.0,
       "time_s": 488.45
     },
     {
       "frame_idx": 14641,
-      "track_id": null,
-      "distance_px": 307.1,
+      "track_id": 172,
+      "distance_px": 0.0,
       "time_s": 488.52
     },
     {
       "frame_idx": 14647,
-      "track_id": null,
-      "distance_px": 322.4,
+      "track_id": 187,
+      "distance_px": 16.8,
       "time_s": 488.72
     },
     {
@@ -737,8 +737,8 @@
     },
     {
       "frame_idx": 14883,
-      "track_id": null,
-      "distance_px": 189.3,
+      "track_id": 200,
+      "distance_px": 52.9,
       "time_s": 496.6
     },
     {
@@ -822,7 +822,7 @@
     {
       "frame_idx": 15441,
       "track_id": null,
-      "distance_px": 358.6,
+      "distance_px": 298.5,
       "time_s": 515.21
     },
     {
@@ -857,8 +857,8 @@
     },
     {
       "frame_idx": 15659,
-      "track_id": null,
-      "distance_px": 189.0,
+      "track_id": 228,
+      "distance_px": 4.2,
       "time_s": 522.49
     },
     {
@@ -899,8 +899,8 @@
     },
     {
       "frame_idx": 15858,
-      "track_id": null,
-      "distance_px": 421.3,
+      "track_id": 262,
+      "distance_px": 58.8,
       "time_s": 529.13
     },
     {
@@ -965,8 +965,8 @@
     },
     {
       "frame_idx": 16022,
-      "track_id": null,
-      "distance_px": 426.2,
+      "track_id": 275,
+      "distance_px": 146.1,
       "time_s": 534.6
     },
     {
@@ -1043,8 +1043,8 @@
     },
     {
       "frame_idx": 16392,
-      "track_id": null,
-      "distance_px": 281.6,
+      "track_id": 300,
+      "distance_px": 95.9,
       "time_s": 546.95
     },
     {
@@ -1068,7 +1068,7 @@
     {
       "frame_idx": 16448,
       "track_id": null,
-      "distance_px": 570.2,
+      "distance_px": 206.5,
       "time_s": 548.81
     },
     {
@@ -1151,26 +1151,26 @@
     },
     {
       "frame_idx": 16871,
-      "track_id": null,
-      "distance_px": 350.1,
+      "track_id": 318,
+      "distance_px": 91.6,
       "time_s": 562.93
     },
     {
       "frame_idx": 16882,
-      "track_id": null,
-      "distance_px": 243.3,
+      "track_id": 318,
+      "distance_px": 72.2,
       "time_s": 563.3
     },
     {
       "frame_idx": 16892,
-      "track_id": null,
-      "distance_px": 176.8,
+      "track_id": 318,
+      "distance_px": 99.3,
       "time_s": 563.63
     },
     {
       "frame_idx": 16898,
       "track_id": null,
-      "distance_px": 244.5,
+      "distance_px": 237.5,
       "time_s": 563.83
     },
     {
@@ -1205,8 +1205,8 @@
     },
     {
       "frame_idx": 17030,
-      "track_id": null,
-      "distance_px": 192.8,
+      "track_id": 339,
+      "distance_px": 69.2,
       "time_s": 568.23
     },
     {
@@ -1217,8 +1217,8 @@
     },
     {
       "frame_idx": 17061,
-      "track_id": null,
-      "distance_px": 361.7,
+      "track_id": 334,
+      "distance_px": 118.3,
       "time_s": 569.27
     },
     {
@@ -1326,13 +1326,13 @@
     {
       "frame_idx": 17428,
       "track_id": null,
-      "distance_px": 252.2,
+      "distance_px": 200.8,
       "time_s": 581.51
     },
     {
       "frame_idx": 17533,
-      "track_id": null,
-      "distance_px": null,
+      "track_id": 378,
+      "distance_px": 108.0,
       "time_s": 585.02
     },
     {
@@ -1344,19 +1344,19 @@
     {
       "frame_idx": 17572,
       "track_id": null,
-      "distance_px": 1004.2,
+      "distance_px": 402.7,
       "time_s": 586.32
     },
     {
       "frame_idx": 17603,
-      "track_id": null,
-      "distance_px": 466.6,
+      "track_id": 384,
+      "distance_px": 52.4,
       "time_s": 587.35
     },
     {
       "frame_idx": 17607,
       "track_id": null,
-      "distance_px": 281.7,
+      "distance_px": 232.5,
       "time_s": 587.49
     },
     {
@@ -1368,7 +1368,7 @@
     {
       "frame_idx": 17748,
       "track_id": null,
-      "distance_px": 215.1,
+      "distance_px": 209.0,
       "time_s": 592.19
     },
     {
@@ -1427,8 +1427,8 @@
     },
     {
       "frame_idx": 18470,
-      "track_id": null,
-      "distance_px": 251.0,
+      "track_id": 396,
+      "distance_px": 47.6,
       "time_s": 616.28
     },
     {
@@ -1470,7 +1470,7 @@
     {
       "frame_idx": 18624,
       "track_id": null,
-      "distance_px": 364.4,
+      "distance_px": 176.1,
       "time_s": 621.42
     },
     {
@@ -1482,7 +1482,7 @@
     {
       "frame_idx": 18661,
       "track_id": null,
-      "distance_px": 410.2,
+      "distance_px": 408.8,
       "time_s": 622.66
     },
     {
@@ -1493,20 +1493,20 @@
     },
     {
       "frame_idx": 18696,
-      "track_id": null,
-      "distance_px": 311.6,
+      "track_id": 410,
+      "distance_px": 80.1,
       "time_s": 623.82
     },
     {
       "frame_idx": 18701,
-      "track_id": null,
-      "distance_px": 256.8,
+      "track_id": 410,
+      "distance_px": 12.0,
       "time_s": 623.99
     },
     {
       "frame_idx": 18727,
       "track_id": null,
-      "distance_px": 339.3,
+      "distance_px": 320.2,
       "time_s": 624.86
     },
     {
@@ -1518,7 +1518,7 @@
     {
       "frame_idx": 18777,
       "track_id": null,
-      "distance_px": 435.7,
+      "distance_px": 397.7,
       "time_s": 626.53
     },
     {
@@ -1536,7 +1536,7 @@
     {
       "frame_idx": 18842,
       "track_id": null,
-      "distance_px": 179.0,
+      "distance_px": 155.4,
       "time_s": 628.69
     },
     {
@@ -1554,7 +1554,7 @@
     {
       "frame_idx": 18896,
       "track_id": null,
-      "distance_px": 809.9,
+      "distance_px": 204.4,
       "time_s": 630.5
     },
     {
@@ -1595,8 +1595,8 @@
     },
     {
       "frame_idx": 19122,
-      "track_id": null,
-      "distance_px": 234.5,
+      "track_id": 432,
+      "distance_px": 36.0,
       "time_s": 638.04
     },
     {
@@ -1607,8 +1607,8 @@
     },
     {
       "frame_idx": 19141,
-      "track_id": null,
-      "distance_px": 442.7,
+      "track_id": 439,
+      "distance_px": 62.2,
       "time_s": 638.67
     },
     {
@@ -1626,7 +1626,7 @@
     {
       "frame_idx": 19177,
       "track_id": null,
-      "distance_px": 290.0,
+      "distance_px": 189.8,
       "time_s": 639.87
     },
     {
@@ -1637,14 +1637,14 @@
     },
     {
       "frame_idx": 19214,
-      "track_id": null,
-      "distance_px": 380.2,
+      "track_id": 442,
+      "distance_px": 9.1,
       "time_s": 641.11
     },
     {
       "frame_idx": 19224,
-      "track_id": null,
-      "distance_px": 389.9,
+      "track_id": 442,
+      "distance_px": 96.8,
       "time_s": 641.44
     },
     {
@@ -1656,19 +1656,19 @@
     {
       "frame_idx": 19258,
       "track_id": null,
-      "distance_px": 314.5,
+      "distance_px": 200.6,
       "time_s": 642.58
     },
     {
       "frame_idx": 19265,
       "track_id": null,
-      "distance_px": 254.6,
+      "distance_px": 225.8,
       "time_s": 642.81
     },
     {
       "frame_idx": 19271,
       "track_id": null,
-      "distance_px": 301.9,
+      "distance_px": 156.8,
       "time_s": 643.01
     },
     {
@@ -1692,7 +1692,7 @@
     {
       "frame_idx": 19320,
       "track_id": null,
-      "distance_px": 1008.3,
+      "distance_px": 531.4,
       "time_s": 644.64
     },
     {
@@ -1752,19 +1752,19 @@
     {
       "frame_idx": 19535,
       "track_id": null,
-      "distance_px": 483.6,
+      "distance_px": 438.5,
       "time_s": 651.82
     },
     {
       "frame_idx": 19555,
       "track_id": null,
-      "distance_px": 518.0,
+      "distance_px": 381.2,
       "time_s": 652.49
     },
     {
       "frame_idx": 19580,
       "track_id": null,
-      "distance_px": 343.2,
+      "distance_px": 334.8,
       "time_s": 653.32
     },
     {
@@ -1830,7 +1830,7 @@
     {
       "frame_idx": 19783,
       "track_id": null,
-      "distance_px": 297.9,
+      "distance_px": 277.5,
       "time_s": 660.09
     },
     {
@@ -1842,7 +1842,7 @@
     {
       "frame_idx": 19893,
       "track_id": null,
-      "distance_px": 849.4,
+      "distance_px": 237.6,
       "time_s": 663.76
     },
     {
@@ -1872,7 +1872,7 @@
     {
       "frame_idx": 19985,
       "track_id": null,
-      "distance_px": 439.2,
+      "distance_px": 382.6,
       "time_s": 666.83
     },
     {
@@ -1925,8 +1925,8 @@
     },
     {
       "frame_idx": 20239,
-      "track_id": null,
-      "distance_px": 409.6,
+      "track_id": 516,
+      "distance_px": 83.3,
       "time_s": 675.31
     },
     {
@@ -1961,8 +1961,8 @@
     },
     {
       "frame_idx": 20432,
-      "track_id": null,
-      "distance_px": 308.8,
+      "track_id": 529,
+      "distance_px": 53.3,
       "time_s": 681.75
     },
     {
@@ -1991,8 +1991,8 @@
     },
     {
       "frame_idx": 20490,
-      "track_id": null,
-      "distance_px": 276.8,
+      "track_id": 524,
+      "distance_px": 116.8,
       "time_s": 683.68
     },
     {
@@ -2004,7 +2004,7 @@
     {
       "frame_idx": 20528,
       "track_id": null,
-      "distance_px": 411.4,
+      "distance_px": 375.3,
       "time_s": 684.95
     },
     {
@@ -2063,14 +2063,14 @@
     },
     {
       "frame_idx": 20849,
-      "track_id": null,
-      "distance_px": 569.2,
+      "track_id": 560,
+      "distance_px": 0.0,
       "time_s": 695.66
     },
     {
       "frame_idx": 20859,
-      "track_id": null,
-      "distance_px": 206.6,
+      "track_id": 561,
+      "distance_px": 76.9,
       "time_s": 696.0
     },
     {

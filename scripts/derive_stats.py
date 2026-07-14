@@ -90,6 +90,18 @@ RAW_DETECTION_VETO_MIN_CONF = 0.15
 # frame is the same physical player, not new evidence.
 RAW_DETECTION_DEDUP_IOU = 0.3
 
+# 81% of unattributed touches (verified on real footage, SLAP_SVIT_1z_upr) had SOME raw
+# player detection within 300px of the ball at the contact frame - the player was seen,
+# just never confirmed into a ByteTrack track in time (track_activation_threshold or
+# minimum_consecutive_frames=2, see track_players) during the fast, blur-prone motion of
+# the contact itself. A track that starts a few frames before/after the contact is almost
+# always the same physical player, since they can't move far in a fraction of a second.
+# Prototyped against the real clip at several window sizes before choosing one: recovery
+# gains taper off past 10 (37 newly-attributed touches at window=10 vs 41 at 15, 47 at
+# 20), and the one window=10-boundary case spot-checked (frame 20849, offset 10) was
+# still a tight, plausible match (ball fell exactly inside the matched box).
+TRACK_MATCH_WINDOW_FRAMES = 10
+
 # Regulation: the attack line sits 3m from the net, not 3m from the baseline. Kept as
 # an independent constant rather than reusing calibrate.py's ATTACK_LINE_M, which is
 # measured from the baseline there (used only for that file's visual overlay) - using
@@ -356,6 +368,27 @@ def find_nearest_player_by_box(point: tuple[float, float],
     return min(((tid, distance_point_to_box(point, box)) for tid, box in candidates.items()), key=lambda t: t[1])
 
 
+def nearby_player_boxes(player_boxes_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]],
+                         frame_idx: int,
+                         window: int = TRACK_MATCH_WINDOW_FRAMES) -> dict[int, tuple[float, float, float, float]]:
+    """For every track id seen anywhere in `frame_idx`'s +/-`window`-frame neighborhood,
+    return that track's box from whichever frame in the neighborhood is closest to
+    `frame_idx` (ties keep the earlier offset). Used to give a track a fighting chance at
+    attribution even if it wasn't confirmed yet - or already lost - at the exact contact
+    frame (see TRACK_MATCH_WINDOW_FRAMES), on the assumption a player hasn't moved far in
+    a fraction of a second."""
+    best: dict[int, tuple[int, tuple[float, float, float, float]]] = {}
+    for offset in range(-window, window + 1):
+        boxes = player_boxes_px_by_frame.get(frame_idx + offset)
+        if not boxes:
+            continue
+        abs_offset = abs(offset)
+        for track_id, box in boxes.items():
+            if track_id not in best or abs_offset < best[track_id][0]:
+                best[track_id] = (abs_offset, box)
+    return {track_id: box for track_id, (_, box) in best.items()}
+
+
 @dataclass
 class Touch:
     frame_idx: int
@@ -366,7 +399,8 @@ class Touch:
 def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[float, float]],
                        player_boxes_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]],
                        raw_player_boxes_px_by_frame: dict[int, list[tuple[float, float, float, float]]] | None = None,
-                       max_distance_px: float = MAX_TOUCH_ATTRIBUTION_DISTANCE_PX) -> list[Touch]:
+                       max_distance_px: float = MAX_TOUCH_ATTRIBUTION_DISTANCE_PX,
+                       track_match_window: int = TRACK_MATCH_WINDOW_FRAMES) -> list[Touch]:
     """For each contact frame, attribute the touch to whichever tracked player's full
     bounding box is nearest the ball in PIXEL space at that frame - but only if that
     nearest player is within `max_distance_px`.
@@ -398,28 +432,50 @@ def attribute_touches(contacts: list[int], ball_positions_px: dict[int, tuple[fl
     but its mere existence closer to the ball is enough to know the tracked candidate
     probably isn't the real toucher, so unattributed is the honest answer.
 
-    Falls back to an unattributed touch (track_id=None) if no player is tracked that
-    frame, the nearest one is implausibly far or vetoed, or the ball itself has no
-    position there - a documented limitation, same shape as this project's other
-    accepted tracking-limitation tradeoffs."""
+    If no player is tracked close enough at the exact contact frame, falls back to
+    nearby_player_boxes - a track confirmed a few frames before/after almost always
+    belongs to the same physical player, since nobody moves far in a fraction of a
+    second, and this is exactly the situation ByteTrack's confirmation lag
+    (minimum_consecutive_frames, track_activation_threshold - see track_players)
+    produces during the fast, blur-prone motion of a real contact. Verified on real
+    footage (SLAP_SVIT_1z_upr): 81% of unattributed touches had SOME raw detection
+    within 300px of the ball at the contact frame - the player was seen, just not
+    confirmed into a track in time. Deliberately NOT applied when the exact-frame
+    nearest was rejected by the veto above (rather than simply absent/too-far): that
+    path already found a same-frame tracked candidate and rejected it on separate,
+    specific evidence (a closer untracked detection) - re-searching a wider window
+    wouldn't add new information there and would just override that judgement without
+    cause. A prototype that didn't draw this distinction was verified (real footage,
+    same clip) to flip 6 previously-confirmed-correct attributions to a different,
+    stale-by-several-frames player for little or no distance improvement.
+
+    Falls back to an unattributed touch (track_id=None) if no player is tracked or
+    trackable-nearby that frame, the nearest one is implausibly far or vetoed, or the
+    ball itself has no position there - a documented limitation, same shape as this
+    project's other accepted tracking-limitation tradeoffs."""
     touches = []
     for frame_idx in contacts:
         ball_pos = ball_positions_px.get(frame_idx)
         if ball_pos is None:
             continue
         nearest = find_nearest_player_by_box(ball_pos, player_boxes_px_by_frame.get(frame_idx, {}))
-        if nearest is None:
-            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=None))
+        if nearest is not None and nearest[1] <= max_distance_px:
+            track_id, dist = nearest
+            raw_boxes = (raw_player_boxes_px_by_frame or {}).get(frame_idx, [])
+            if raw_boxes and min(distance_point_to_box(ball_pos, b) for b in raw_boxes) < dist:
+                touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=dist))
+            else:
+                touches.append(Touch(frame_idx=frame_idx, track_id=track_id, distance_px=dist))
             continue
-        track_id, dist = nearest
-        if dist > max_distance_px:
-            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=dist))
-            continue
-        raw_boxes = (raw_player_boxes_px_by_frame or {}).get(frame_idx, [])
-        if raw_boxes and min(distance_point_to_box(ball_pos, b) for b in raw_boxes) < dist:
-            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=dist))
+
+        rescued = find_nearest_player_by_box(
+            ball_pos, nearby_player_boxes(player_boxes_px_by_frame, frame_idx, track_match_window)
+        )
+        if rescued is not None and rescued[1] <= max_distance_px:
+            touches.append(Touch(frame_idx=frame_idx, track_id=rescued[0], distance_px=rescued[1]))
         else:
-            touches.append(Touch(frame_idx=frame_idx, track_id=track_id, distance_px=dist))
+            fallback_dist = rescued[1] if rescued is not None else (nearest[1] if nearest is not None else None)
+            touches.append(Touch(frame_idx=frame_idx, track_id=None, distance_px=fallback_dist))
     return touches
 
 
