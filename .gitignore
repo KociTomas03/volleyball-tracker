@@ -12,12 +12,17 @@ data/frames/
 data/frames_dense/
 data/frames_dense2/
 data/roboflow_ball/
+data/roboflow_ball_seg/
 data/combined_ball_dataset.yaml
+data/combined_ball_dataset_seg.yaml
+data/self_labeled_seg_dataset.yaml
 data/annotations/detect_review/
 data/annotations/ball_zero_shot/
 data/annotations/v2_precision_check/
 data/self_labeled/*/images/
 data/self_labeled/*/labels.cache
+data/self_labeled_seg/*/images/
+data/self_labeled_seg/*/labels.cache
 data/tracked/
 
 models/
