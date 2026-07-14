@@ -36,6 +36,24 @@ from track_video import (
 # footage) - revisit once a full SLAP_SVIT clip has been processed and eyeballed.
 CONTACT_WINDOW_FRAMES = 5  # local-max window radius (~1/6s at ~30fps) for contact detection
 CONTACT_MIN_EXCURSION_PX = 15.0  # minimum vertical excursion (px) to count as a real contact, not jitter
+
+# Verified on real footage (SLAP_SVIT_1z_upr): 29% of raw find_ball_contacts output
+# (110/385) were pairs less than 10 frames apart in the same rally - implausible for
+# real consecutive touches. Traced to segmentation-detector centroid jitter right around
+# a real contact (e.g. frames 12086-12100: a genuine extremum at 12086, then a single-
+# frame 30px jump - not physics, the ball can't teleport near its apex - followed by
+# ~10 frames wobbling in a tight band, each independently clearing
+# CONTACT_MIN_EXCURSION_PX and getting flagged as its own contact). No excursion
+# threshold alone can fix this: close-pair excursions ranged from 1px (clear noise) to
+# 789px (a real fast block/dig exchange that must NOT be merged away). A median filter
+# over the raw trajectory suppresses single-frame jitter while preserving genuine
+# parabolic reversals. Window chosen by prototyping against the real clip: at 7, the
+# 12086-12100 jitter cluster (4 spurious contacts) collapsed to 1, while a real fast
+# exchange (frames 12144/12152/12155, huge excursions) survived as 3 distinct contacts;
+# close-pair count dropped 110->75 (partial, not zero - some clusters need more, and
+# over-widening risks smoothing away real quick exchanges, so this isn't chased further
+# by number alone - see the visual audit that followed).
+CONTACT_SMOOTHING_WINDOW = 7
 NET_CROSSING_X_MARGIN_M = 1.0  # how far outside the sidelines a net crossing may still register (serve/attack near the antenna)
 MAX_DEAD_GAP_FRAMES = 90  # ~3s at ~30fps - longer than this without an in-bounds ball position ends a rally segment
 MIN_RALLY_CROSSINGS = 2  # a real rally has the ball crossing the net at least this many times (serve + return); fewer is a toss/warm-up touch
@@ -166,6 +184,28 @@ def stationary_track_ids(foot_px_by_frame: dict[int, dict[int, tuple[float, floa
         if extent <= max_extent_px:
             stationary.add(track_id)
     return stationary
+
+
+def smooth_ball_trajectory(ball_y_by_frame: dict[int, float],
+                            window: int = CONTACT_SMOOTHING_WINDOW) -> dict[int, float]:
+    """Median-filter the ball's pixel-y trajectory over each frame's +/-`window//2`
+    neighborhood (available frames only - a frame near a tracking gap is smoothed over
+    whatever's actually present rather than skipped, unlike find_ball_contacts's stricter
+    full-neighborhood requirement). Suppresses single-frame detector-centroid jitter
+    (see CONTACT_SMOOTHING_WINDOW) before find_ball_contacts looks for extrema, without
+    changing find_ball_contacts itself - keeps that function operating on a plain
+    y-by-frame dict, pure and independently testable."""
+    frames = sorted(ball_y_by_frame)
+    frame_set = set(frames)
+    half = window // 2
+    smoothed = {}
+    for f in frames:
+        neighborhood = [wf for wf in range(f - half, f + half + 1) if wf in frame_set]
+        values = sorted(ball_y_by_frame[wf] for wf in neighborhood)
+        n = len(values)
+        mid = n // 2
+        smoothed[f] = values[mid] if n % 2 == 1 else (values[mid - 1] + values[mid]) / 2
+    return smoothed
 
 
 def find_ball_contacts(ball_y_by_frame: dict[int, float], window: int = CONTACT_WINDOW_FRAMES,
@@ -481,7 +521,7 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
         for frame_idx, boxes in box_px_by_frame.items()
     }
 
-    contacts = find_ball_contacts(ball_y_px_by_frame)
+    contacts = find_ball_contacts(smooth_ball_trajectory(ball_y_px_by_frame))
     net_crossings = detect_net_crossings(
         ball_positions_court, NET_Y_M, x_bounds=(-NET_CROSSING_X_MARGIN_M, COURT_WIDTH_M + NET_CROSSING_X_MARGIN_M)
     )

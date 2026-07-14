@@ -16,6 +16,7 @@ from derive_stats import (
     iou,
     player_foot_point,
     segment_rallies,
+    smooth_ball_trajectory,
     stationary_track_ids,
     zone_for_position,
 )
@@ -115,6 +116,50 @@ def test_find_ball_contacts_separates_two_distant_peaks():
     y_by_frame.update(_parabola_y(center=40, width=8, peak=90.0))
     contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
     assert contacts == [10, 40]
+
+
+# --- smooth_ball_trajectory ---
+
+def test_smooth_ball_trajectory_suppresses_single_frame_spike():
+    # A lone single-frame detector-jitter spike in an otherwise flat trajectory - the
+    # median filter should throw it out entirely, not just dampen it.
+    y_by_frame = {f: 50.0 for f in range(20)}
+    y_by_frame[10] = 90.0
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    assert smoothed[10] == 50.0
+
+
+def test_smooth_ball_trajectory_preserves_real_extremum():
+    # A large, genuine vertical excursion (the shape a real contact produces) must
+    # still be detectable as a contact after smoothing - only single-frame jitter
+    # should be suppressed, not real reversals.
+    y_by_frame = _valley_y(center=30, width=20, trough=0.0)
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    contacts = find_ball_contacts(smoothed, window=5, min_excursion_px=15.0)
+    assert any(28 <= c <= 32 for c in contacts)
+
+
+def test_smooth_ball_trajectory_reduces_spurious_close_contacts():
+    # Small-amplitude jitter near an otherwise-stable ball position (e.g. the ball
+    # briefly occluded by a hand during a real touch) - without smoothing this creates
+    # several independent nearby "contacts"; the median filter should collapse them.
+    y_by_frame = {f: 50.0 for f in range(40)}
+    y_by_frame[10] = 70.0
+    y_by_frame[14] = 30.0
+    y_by_frame[18] = 68.0
+    raw_contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    smoothed_contacts = find_ball_contacts(
+        smooth_ball_trajectory(y_by_frame, window=7), window=5, min_excursion_px=15.0
+    )
+    assert len(smoothed_contacts) < len(raw_contacts)
+
+
+def test_smooth_ball_trajectory_handles_boundary_frames():
+    # Frames near the start/end of the range have a truncated neighborhood - should
+    # smooth over whatever's available rather than requiring a full window.
+    y_by_frame = {0: 50.0, 1: 90.0, 2: 50.0, 3: 50.0}
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    assert set(smoothed) == {0, 1, 2, 3}
 
 
 # --- detect_net_crossings ---
