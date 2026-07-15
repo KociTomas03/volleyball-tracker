@@ -75,6 +75,36 @@ BALL_HARD_SPEED_PX_PER_FRAME = 220  # accepted only if a nearby detection confir
 BALL_JUMP_CONFIRM_WINDOW = 2  # frames to look ahead for confirmation of a soft-hard jump
 BALL_JUMP_CONFIRM_RADIUS = 60  # px - how close a follow-up detection must land to confirm
 
+# Gaps longer than this many frames since the last accepted detection make the Kalman
+# gate's own "trajectory-consistent" verdict untrustworthy on its own. Root cause:
+# ball_kalman.py's process noise grows with dt**5 in the position block, so P_pred's
+# position variance balloons well before max_extend_gap is reached (e.g. ~82,000px^2 at
+# an 8-frame gap, dwarfing the ~9-900px^2 measurement noise) - "consistent with the
+# predicted position" stops discriminating anything once the prediction itself is that
+# uncertain. Verified on real footage (SLAP_SVIT_1z_upr): a single low-confidence (0.12)
+# detection 465px from the real trajectory passed the gate outright at an 8-frame gap
+# and got treated as the ball's real position, fabricating a ~300px trajectory excursion
+# that find_ball_contacts read as a real contact and attributed to an uninvolved nearby
+# player. A systemic scan of a 9000-frame slice found 25 such gate-accepted
+# low-confidence outliers, with 45/332 (13.6%) of detected touches landing within 15
+# frames of one.
+#
+# Beyond this gap, a gate-passing candidate must ALSO have moved less than
+# BALL_GATE_TRUSTED_DRIFT_PX from the last accepted position, or be corroborated by
+# confirmed_near(), before being trusted - same corroboration already required for the
+# separate bounded-but-gate-failed fallback below, just extended to cover the strict
+# gate too. The drift floor (rather than gap alone) exists because a real, legitimate
+# case - the ball sitting almost exactly where it last was, picked up again after a
+# longer-than-usual gap - must stay trusted without needing a lucky follow-up detection
+# (see test_track_ball_extends_recent_track_with_low_conf_detection); it's specifically
+# a *large, gap-inflated* jump that the collapsed gate can no longer be trusted to
+# reject on its own. Swept several (gap, drift) combinations on the same 9000-frame
+# slice: (2, 10px) rejects 16/25 (64%) of the known-bad outliers while losing only
+# 99/4921 (2.0%) of total real ball-position coverage - close to gap alone's 18/25 at
+# 112/4921 lost, but without breaking the motionless-ball case above.
+BALL_GATE_TRUSTED_GAP_FRAMES = 2
+BALL_GATE_TRUSTED_DRIFT_PX = 10.0
+
 # A position-based veto (excluding candidates near a player's head/feet, where the v2 ball
 # model kept mistaking heads and bright shoe accents for the ball) was tried and reverted.
 # It worked for v2, but the ball detector was retrained on a much larger, more diverse
@@ -133,7 +163,9 @@ def track_ball_states(per_frame: dict[int, dict[str, list]], frame_indices: rang
                        contact_bound: float = BALL_HARD_SPEED_PX_PER_FRAME,
                        confirm_window: int = BALL_JUMP_CONFIRM_WINDOW,
                        confirm_radius: float = BALL_JUMP_CONFIRM_RADIUS,
-                       gate_chi2: float = GATE_CHI2) -> dict[int, BallEstimate]:
+                       gate_chi2: float = GATE_CHI2,
+                       gate_trusted_gap: int = BALL_GATE_TRUSTED_GAP_FRAMES,
+                       gate_trusted_drift: float = BALL_GATE_TRUSTED_DRIFT_PX) -> dict[int, BallEstimate]:
     """Kalman-filter-based single-object ball tracker (see ball_kalman.py for the pure
     math). Two states - SEARCHING (no filter) and TRACKING (filter anchored) - plus one
     internal event (CONTACT, a velocity re-seed) rather than a separate state, since a
@@ -147,11 +179,14 @@ def track_ball_states(per_frame: dict[int, dict[str, list]], frame_indices: rang
     baseline measurement noise (not confidence-scaled - a candidate can't buy its way
     through the gate by being labeled low-confidence). Among candidates that pass the
     gate, pick the one minimizing `d^2 - 2*ln(conf)` (trajectory-consistency first,
-    confidence as tiebreaker) and commit it with the Kalman update (which *does* use
-    confidence-scaled measurement noise, so a low-confidence pick still nudges the
-    filter gently). This is what lets a near, lower-confidence, trajectory-consistent
-    detection beat a distant higher-confidence false positive - the false positive
-    simply never passes the gate.
+    confidence as tiebreaker). If the elapsed gap is within gate_trusted_gap, commit it
+    directly with the Kalman update (which *does* use confidence-scaled measurement
+    noise, so a low-confidence pick still nudges the filter gently) - this is what lets
+    a near, lower-confidence, trajectory-consistent detection beat a distant
+    higher-confidence false positive in the normal case. Beyond gate_trusted_gap, the
+    gate's own verdict is no longer trusted on its own (see gate_trusted_gap's docstring
+    at its definition) - the pick must also be corroborated by confirmed_near before
+    being committed, same as the no-gate-match fallback below.
 
     If nothing passes the gate: a candidate within the looser contact_bound (the old
     heuristic's hard_speed, playing the same "how far could a real jump go" role) that
@@ -170,14 +205,15 @@ def track_ball_states(per_frame: dict[int, dict[str, list]], frame_indices: rang
 
     Known residual limitation (not chased further - see plan discussion on not
     deep-tuning against disposable placeholder footage): a false positive that happens to
-    be locally self-consistent across 2+ frames (e.g. a bright spot in the crowd stands
-    that doesn't move much) can still occasionally seed or extend a short-lived incorrect
-    track, since a self-consistent false trajectory is - by construction - indistinguishable
-    from a real one using motion alone. This is the same category of failure as the
-    player-head/shoe false positives found earlier in this project's ball-detector work;
-    a position-based veto was tried and rejected for that problem (it cost far more real
-    coverage than it saved - see the removed-veto comment near the top of this file), and
-    the same tradeoff applies here.
+    be locally self-consistent across 2+ frames within gate_trusted_gap (e.g. a bright
+    spot in the crowd stands that doesn't move much) can still occasionally seed or
+    extend a short-lived incorrect track, since a self-consistent false trajectory is -
+    by construction - indistinguishable from a real one using motion alone over that
+    short a window. This is the same category of failure as the player-head/shoe false
+    positives found earlier in this project's ball-detector work; a position-based veto
+    was tried and rejected for that problem (it cost far more real coverage than it
+    saved - see the removed-veto comment near the top of this file), and the same
+    tradeoff applies here.
 
     A track with no accepted frame for more than max_extend_gap drops back to
     SEARCHING; the next high_conf detection anywhere seeds a fresh filter."""
@@ -242,10 +278,22 @@ def track_ball_states(per_frame: dict[int, dict[str, list]], frame_indices: rang
 
         if gated:
             box, new_pos, _ = min(gated, key=lambda item: item[2] - 2 * math.log(max(item[0][4], 1e-6)))
-            kf.update(x_pred, P_pred, new_pos, box[4])
-            last_frame, last_pos = frame_idx, new_pos
-            record(frame_idx, is_contact=False)
-            continue
+            # Beyond gate_trusted_gap, Q's process noise (see build_Q's dt**5 position
+            # term) has inflated P_pred enough that "passes the gate" stops being a
+            # meaningful trajectory-consistency claim on its own - see
+            # BALL_GATE_TRUSTED_GAP_FRAMES. A candidate that's barely moved from the
+            # last accepted position (within gate_trusted_drift) is still trusted
+            # outright regardless of gap (a real, legitimately near-motionless ball);
+            # anything that moved further needs corroboration, same as the
+            # bounded-but-gate-failed fallback below.
+            drifted_far = math.dist(last_pos, new_pos) > gate_trusted_drift
+            if gap > gate_trusted_gap and drifted_far and not confirmed_near(new_pos, idx):
+                pass  # not corroborated - fall through to the bounded-fallback check below
+            else:
+                kf.update(x_pred, P_pred, new_pos, box[4])
+                last_frame, last_pos = frame_idx, new_pos
+                record(frame_idx, is_contact=False)
+                continue
 
         if bounded:
             box = best_box(bounded)
