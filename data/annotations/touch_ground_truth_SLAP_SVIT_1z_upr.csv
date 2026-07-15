@@ -1,0 +1,74 @@
+frame_idx,rally_index,is_real_touch,pipeline_track_id,pipeline_dist_px,attribution_verdict,correct_track_id,confidence,notes
+12089,0,true,31,0.0,correct,31,high,
+12126,0,true,18,31.9,correct,18,high,
+12147,0,false,,277.1,na,,high,top-of-arc no player near
+12175,0,true,14,31.2,correct,14,high,
+12228,0,true,15,81.4,correct,15,high,
+12246,0,true,49,0.0,correct,49,high,
+12272,0,false,,227.8,na,,high,top-of-arc no player near
+12296,0,true,20,0.0,correct,20,high,
+12318,0,false,,196.2,na,,high,top-of-arc no player near
+12339,0,true,20,0.0,correct,20,high,
+12357,0,true,67,50.3,correct,67,high,
+12372,0,true,52,0.0,correct,52,high,
+12391,0,true,77,0.0,correct,77,high,
+12409,0,false,,210.0,na,,high,top-of-arc no player near
+12426,0,true,,119.1,missed,,medium,real player present; likely raw-detection-veto pattern
+12443,0,true,,55.9,missed,,medium,small dist real player present; veto pattern
+12464,0,true,88,18.8,correct,88,high,
+12481,0,true,72,147.4,correct,72,high,
+12506,0,true,62,53.2,correct,62,high,
+12532,0,false,94,144.3,wrong,,medium,false positive but rescue mechanism wrongly credited track 94 - needs follow-up
+12547,0,true,94,1.1,correct,94,high,
+12567,0,false,119,124.3,wrong,,medium,false positive but rescue mechanism wrongly credited track 119 - needs follow-up
+12587,0,true,119,78.1,wrong,,medium,jumping attacker was real toucher; distant track 119 (reused from 12567) wrongly credited - true toucher id not yet pinned
+12607,0,false,,200.1,na,,low,leaning false positive - ambiguous - spot check
+12620,0,true,93,104.0,correct,93,high,
+12631,0,true,,789.9,missed,,high,known/accepted fast-exchange limitation (existing code comment references 789px)
+12645,0,true,,71.1,missed,,medium,veto pattern
+12657,0,true,,50.6,missed,,medium,veto pattern; scoreboard still 15:18 here
+12682,0,true,130,134.0,correct,130,high,
+12687,0,true,123,1.4,correct,123,high,
+12763,0,true,13,16.5,correct,13,high,scoreboard now 15:19 - jumped between 12657 and here; possible rally-merge (segment_rallies) - spot check
+12770,0,true,137,19.4,correct,137,high,
+12782,0,true,105,13.6,correct,105,high,
+12800,0,true,105,31.2,correct,105,high,
+14197,2,false,,95.9,na,,low,leaning false positive - ball airborne no one reaching - spot check
+14217,2,true,,22.9,missed,,medium,small dist veto pattern
+14241,2,false,,224.5,na,,high,top-of-arc
+14257,2,true,348,30.3,correct,348,high,setter contact ball at hands
+14280,2,false,,303.3,na,,high,top-of-arc
+14302,2,true,325,22.1,correct,325,high,dig/block scramble
+14311,2,true,,27.1,missed,,medium,veto pattern diving player visible
+14316,2,true,405,0.0,correct,405,high,
+14329,2,true,358,12.4,correct,358,high,
+14350,2,true,358,103.4,correct,358,medium,dig moderate dist track id reused from 14329
+14383,2,false,,198.8,na,,high,top-of-arc near ceiling/window empty sky
+14405,2,true,414,46.9,correct,414,high,jump reach at net
+14430,2,false,,306.2,na,,high,top-of-arc
+14453,2,true,410,35.3,correct,410,high,setter hands right at ball
+14477,2,false,,368.6,na,,high,top-of-arc high near windows
+14498,2,true,410,6.4,correct,410,high,
+14516,2,false,,217.7,na,,high,top-of-arc
+14538,2,true,423,26.6,correct,423,high,
+14586,2,true,358,18.1,correct,358,high,hitter/blocker at net
+14608,2,false,,225.3,na,,high,top-of-arc near scoreboard
+14639,2,true,411,59.3,correct,411,high,net contest
+14641,2,true,411,0.0,correct,411,high,
+14647,2,true,453,16.3,correct,453,high,
+14652,2,true,453,32.2,correct,453,high,
+14659,2,true,385,40.9,correct,385,high,
+14664,2,true,385,0.0,correct,385,high,scoreboard still 18:19 here
+14777,2,false,456,82.9,na,,low,leaning false positive no player clearly reaching; scoreboard now 19:19 - jumped since 14664 - possible rally-merge - spot check
+14787,2,false,456,117.2,na,,low,leaning false positive ball mid-transit - spot check
+14801,2,true,475,39.5,correct,475,medium,plausible dig near yellow-team cluster
+14852,2,false,459,78.0,na,,medium,ball isolated in open court no player near
+20755,5,true,1401,67.8,correct,1401,high,serve
+20772,5,true,1347,52.7,correct,1347,high,reception/pass
+20798,5,false,,153.9,na,,high,top-of-arc no player near
+20818,5,true,,48.5,missed,,medium,set - real player at ball; veto pattern
+20830,5,true,1397,39.0,correct,1397,high,attack
+20849,5,true,1421,0.0,correct,1421,high,dig/block
+20875,5,false,,154.6,na,,high,top-of-arc no player near
+20888,5,true,1422,50.2,correct,1422,high,set
+20903,5,false,1422,133.1,na,,medium,top-of-arc/spurious - reuses track id from prior real touch at large dist - leans false positive not wrong-attribution
