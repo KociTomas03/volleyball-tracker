@@ -30,21 +30,14 @@
     {
       "start_frame": 15107,
       "end_frame": 17611,
-      "net_crossings": 59,
+      "net_crossings": 58,
       "start_s": 504.07,
       "end_s": 587.62
     },
     {
-      "start_frame": 17737,
-      "end_frame": 17888,
-      "net_crossings": 2,
-      "start_s": 591.82,
-      "end_s": 596.86
-    },
-    {
       "start_frame": 18366,
       "end_frame": 20618,
-      "net_crossings": 59,
+      "net_crossings": 57,
       "start_s": 612.81,
       "end_s": 687.95
     },
@@ -1358,54 +1351,6 @@
       "track_id": null,
       "distance_px": 237.2,
       "time_s": 587.49
-    },
-    {
-      "frame_idx": 17738,
-      "track_id": null,
-      "distance_px": 298.2,
-      "time_s": 591.86
-    },
-    {
-      "frame_idx": 17748,
-      "track_id": null,
-      "distance_px": 216.6,
-      "time_s": 592.19
-    },
-    {
-      "frame_idx": 17758,
-      "track_id": null,
-      "distance_px": 182.9,
-      "time_s": 592.53
-    },
-    {
-      "frame_idx": 17766,
-      "track_id": null,
-      "distance_px": 240.5,
-      "time_s": 592.79
-    },
-    {
-      "frame_idx": 17779,
-      "track_id": null,
-      "distance_px": 293.9,
-      "time_s": 593.23
-    },
-    {
-      "frame_idx": 17789,
-      "track_id": null,
-      "distance_px": 92.5,
-      "time_s": 593.56
-    },
-    {
-      "frame_idx": 17804,
-      "track_id": null,
-      "distance_px": 471.5,
-      "time_s": 594.06
-    },
-    {
-      "frame_idx": 17874,
-      "track_id": null,
-      "distance_px": 1175.8,
-      "time_s": 596.4
     },
     {
       "frame_idx": 18448,
@@ -3119,28 +3064,7 @@
       "5": 6
     },
     "929": {
-      "5": 97
-    },
-    "958": {
-      "5": 46
-    },
-    "965": {
-      "5": 12
-    },
-    "973": {
-      "5": 19
-    },
-    "974": {
-      "5": 6
-    },
-    "975": {
-      "5": 4
-    },
-    "934": {
-      "5": 4
-    },
-    "964": {
-      "5": 39
+      "5": 5
     },
     "980": {
       "5": 452

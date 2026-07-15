@@ -266,16 +266,32 @@ def detect_net_crossings(ball_court_positions: dict[int, tuple[float, float]], n
     """Frames (the later frame of each crossing pair) where the ball's court-space y
     crosses `net_y`, restricted to consecutive frame indices (a "crossing" spanning a
     tracking gap isn't a real-time net crossing) and to plausible in-court x (gated by
-    `x_bounds`, wider than the court itself to allow a serve/attack near the antenna)."""
+    `x_bounds`, wider than the court itself to allow a serve/attack near the antenna).
+
+    Both endpoints must also independently pass within_court_bounds. Verified on real
+    footage (SLAP_SVIT_1z_upr): a single-frame homography extrapolation blip (ball
+    pixel position near a frame edge reprojecting to court y=398m - twenty times the
+    court length, the same "confidently wrong" extrapolation within_court_bounds's own
+    docstring warns about) produced two spurious net crossings in immediate succession,
+    just barely meeting MIN_RALLY_CROSSINGS=2, and turned ~5s of dead time right after a
+    set-ending point (ball rolling loosely on the floor, players walking off) into a
+    fabricated 8-touch "rally". x_bounds alone doesn't catch this: the wild y-value can
+    still land inside a wide x gate. Confirmed this removes exactly that spurious rally
+    and no real one: re-run against the same clip's other 6 rallies dropped only 3 extra
+    stray crossings (already-redundant noise inside rallies with dozens of crossings)
+    and changed no rally's start/end frame."""
     frames = sorted(ball_court_positions)
     lo_x, hi_x = x_bounds
     crossings: list[int] = []
     for a, b in zip(frames, frames[1:]):
         if b - a != 1:
             continue
-        xa, ya = ball_court_positions[a]
-        xb, yb = ball_court_positions[b]
+        pa, pb = ball_court_positions[a], ball_court_positions[b]
+        xa, ya = pa
+        xb, yb = pb
         if ya == net_y or yb == net_y:
+            continue
+        if not (within_court_bounds(pa) and within_court_bounds(pb)):
             continue
         if (ya - net_y) * (yb - net_y) < 0 and lo_x <= xa <= hi_x and lo_x <= xb <= hi_x:
             crossings.append(b)
