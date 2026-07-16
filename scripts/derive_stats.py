@@ -67,6 +67,30 @@ OUT_OF_BOUNDS_MARGIN_M = 3.0  # ball beyond court+this margin is treated as "out
 # (250px+) seen in the untracked-toucher/off-frame cases.
 MAX_TOUCH_ATTRIBUTION_DISTANCE_PX = 150.0
 
+# Verified against the Phase 5 ground-truth review (data/annotations/
+# touch_ground_truth_SLAP_SVIT_1z_upr.csv, 73 pipeline-flagged "touches" across 3
+# rallies, each manually checked against rendered frame context): 21/73 (29%) were
+# false positives, and every single one had the same signature - the ball at a local
+# pixel-y extremum (find_ball_contacts fires correctly on the trajectory shape) with
+# NO player, tracked or raw, anywhere near it (95.9-368.6px to the nearest one). Every
+# confirmed real touch, including ones the attribution veto later rejected, had a
+# player within 147.4px at the contact frame. find_ball_contacts's vertical-excursion
+# threshold alone can't tell these apart - a real top-of-arc contact and the ball's
+# ordinary ballistic peak between two real touches look identical in y-trajectory shape
+# alone. Reuses MAX_TOUCH_ATTRIBUTION_DISTANCE_PX's value since the same distance range
+# happens to separate both problems, though this gates a different question (does a
+# contact exist at all) than that one (who gets credited for it).
+#
+# Verified end-to-end on the same clip: contact precision 71.2%->85.0% (FP 21->9),
+# attribution accuracy 84.3%->86.0%, at the cost of exactly one already-known,
+# already-unattributed real touch (frame 12631, a genuine fast block/dig exchange
+# whose tracked player box was 789.9px from the ball at contact - motion-blur/
+# interpolation lag during very fast play, not a false positive) now being dropped as
+# a contact entirely rather than kept-but-unattributed. That touch's attribution was
+# already track_id=None before this filter existed, so this is a touch-count loss on
+# an already-broken case, not a new attribution regression.
+CONTACT_MAX_PLAYER_DISTANCE_PX = MAX_TOUCH_ATTRIBUTION_DISTANCE_PX
+
 # User-reported wrong attributions on real footage (SLAP_SVIT_1z_upr) traced to the
 # same root cause 2 of 3 times: the true toucher WAS seen by the raw YOLO detector
 # (0.221-0.435 confidence, right at the ball) but never became an available track -
@@ -405,6 +429,53 @@ def nearby_player_boxes(player_boxes_px_by_frame: dict[int, dict[int, tuple[floa
     return {track_id: box for track_id, (_, box) in best.items()}
 
 
+def filter_contacts_by_player_proximity(
+        contacts: list[int],
+        ball_positions_px: dict[int, tuple[float, float]],
+        player_boxes_px_by_frame: dict[int, dict[int, tuple[float, float, float, float]]],
+        raw_player_boxes_px_by_frame: dict[int, list[tuple[float, float, float, float]]] | None = None,
+        max_distance_px: float = CONTACT_MAX_PLAYER_DISTANCE_PX,
+        track_match_window: int = TRACK_MATCH_WINDOW_FRAMES) -> list[int]:
+    """Drops contact frames where no player - tracked, raw, or trackable-nearby - is
+    within `max_distance_px` of the ball. find_ball_contacts only looks at the ball's
+    own trajectory shape (a local pixel-y extremum), which can't distinguish a real
+    top-of-arc contact from the ball's ordinary ballistic peak between two real touches
+    when nobody has to reach it at that height - see CONTACT_MAX_PLAYER_DISTANCE_PX for
+    the real-footage evidence this is a common, not rare, failure mode (29% of all
+    pipeline-flagged contacts in the reviewed ground truth).
+
+    Deliberately checks tracked boxes, raw (untracked) detections, AND a
+    track_match_window neighborhood search (same fallback attribute_touches uses) before
+    rejecting a contact - a real touch must not be discarded just because the true
+    toucher wasn't yet a confirmed track or was briefly undetected at the exact contact
+    frame, the same confirmation-lag situation attribute_touches's own rescue path
+    exists for. This is intentionally more permissive than attribute_touches's own
+    acceptance logic (which picks a single best candidate and can still veto it) -
+    this function only asks "is a real touch plausible here at all," not "who did it";
+    attribute_touches decides that separately, downstream, on whatever contacts survive
+    here."""
+    raw_by_frame = raw_player_boxes_px_by_frame or {}
+    kept = []
+    for frame_idx in contacts:
+        ball_pos = ball_positions_px.get(frame_idx)
+        if ball_pos is None:
+            continue
+        distances = []
+        nearest_tracked = find_nearest_player_by_box(ball_pos, player_boxes_px_by_frame.get(frame_idx, {}))
+        if nearest_tracked is not None:
+            distances.append(nearest_tracked[1])
+        distances.extend(distance_point_to_box(ball_pos, box) for box in raw_by_frame.get(frame_idx, []))
+        if not distances or min(distances) > max_distance_px:
+            nearest_nearby = find_nearest_player_by_box(
+                ball_pos, nearby_player_boxes(player_boxes_px_by_frame, frame_idx, track_match_window)
+            )
+            if nearest_nearby is not None:
+                distances.append(nearest_nearby[1])
+        if distances and min(distances) <= max_distance_px:
+            kept.append(frame_idx)
+    return kept
+
+
 @dataclass
 class Touch:
     frame_idx: int
@@ -624,6 +695,9 @@ def derive_stats(video_path: Path, detections_csv: Path, homography_path: Path,
             and not any(iou(box[:4], tracked) > RAW_DETECTION_DEDUP_IOU for tracked in tracked_boxes_this_frame)
         ]
     ball_positions_px = {f: (cx, cy) for f, (cx, cy, _interp) in ball_by_frame.items()}
+    in_play_contacts = filter_contacts_by_player_proximity(
+        in_play_contacts, ball_positions_px, in_play_player_boxes_px, raw_player_boxes_px
+    )
     touches = attribute_touches(in_play_contacts, ball_positions_px, in_play_player_boxes_px, raw_player_boxes_px)
     zone_occupancy = compute_zone_occupancy(in_play_player_positions)
 

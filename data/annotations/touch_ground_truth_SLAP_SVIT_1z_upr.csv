@@ -24,7 +24,7 @@ frame_idx,rally_index,is_real_touch,pipeline_track_id,pipeline_dist_px,attributi
 12587,0,true,119,78.1,wrong,,medium,jumping attacker was real toucher; distant track 119 (reused from 12567) wrongly credited - true toucher id not yet pinned
 12607,0,false,,200.1,na,,low,leaning false positive - ambiguous - spot check
 12620,0,true,93,104.0,correct,93,high,
-12631,0,true,,789.9,missed,,high,known/accepted fast-exchange limitation (existing code comment references 789px)
+12631,0,true,,789.9,missed,,high,real fast block/dig exchange - toucher's tracked box was 789.9px from the ball (motion-blur/interpolation lag during a very fast exchange - NOT the same 789px referenced in CONTACT_SMOOTHING_WINDOW's comment, that is a vertical-excursion amplitude, a different metric that coincidentally matches in magnitude); now dropped entirely by filter_contacts_by_player_proximity (CONTACT_MAX_PLAYER_DISTANCE_PX=150) since nobody was within reach at that frame either - was already unattributed (track_id=None) before that fix too, so no attribution regression, only a touch-count one
 12645,0,true,,71.1,missed,,medium,veto pattern
 12657,0,true,,50.6,missed,,medium,veto pattern; scoreboard still 15:18 here
 12682,0,true,130,134.0,correct,130,high,

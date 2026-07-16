@@ -9,6 +9,7 @@ from derive_stats import (
     compute_zone_occupancy,
     detect_net_crossings,
     distance_point_to_box,
+    filter_contacts_by_player_proximity,
     find_ball_contacts,
     find_nearest_player_by_box,
     frames_within_rallies,
@@ -412,6 +413,67 @@ def test_nearby_player_boxes_no_data_in_window_returns_empty():
 def test_nearby_player_boxes_outside_window_is_ignored():
     pbf = {2: {1: (0.0, 0.0, 1.0, 1.0)}}
     assert nearby_player_boxes(pbf, 10, window=5) == {}
+
+
+# --- filter_contacts_by_player_proximity ---
+
+def test_filter_contacts_by_player_proximity_keeps_contact_with_tracked_player_nearby():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (50.0, 0.0, 50.0, 0.0)}}
+    assert filter_contacts_by_player_proximity([10], ball_positions, players, max_distance_px=150.0) == [10]
+
+
+def test_filter_contacts_by_player_proximity_drops_top_of_arc_with_nobody_near():
+    # Ball at a trajectory extremum, but every player is far away - the ordinary
+    # ballistic-peak-between-two-real-touches false positive this exists to catch.
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (300.0, 300.0, 310.0, 310.0)}}
+    assert filter_contacts_by_player_proximity([10], ball_positions, players, max_distance_px=150.0) == []
+
+
+def test_filter_contacts_by_player_proximity_keeps_contact_via_raw_detection_only():
+    # No tracked player nearby, but an untracked raw detection is right there - the
+    # true toucher just wasn't confirmed into a track yet (see attribute_touches's
+    # own rescue logic for the same situation) - must not be discarded as a false
+    # positive on that basis alone.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (500.0, 500.0, 510.0, 510.0)}}
+    raw_boxes = {10: [(95.0, 95.0, 105.0, 105.0)]}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, raw_boxes, max_distance_px=150.0
+    ) == [10]
+
+
+def test_filter_contacts_by_player_proximity_keeps_contact_via_nearby_frame_track():
+    # Nobody tracked or raw at the exact contact frame, but a track shows up a couple
+    # frames later right where the ball was - confirmation lag, not a real absence.
+    ball_positions = {10: (5.0, 5.0)}
+    players = {10: {}, 12: {7: (5.0, 5.0, 6.0, 6.0)}}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, max_distance_px=150.0, track_match_window=5
+    ) == [10]
+
+
+def test_filter_contacts_by_player_proximity_drops_when_nearby_frame_track_still_too_far():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {}, 12: {7: (500.0, 500.0, 501.0, 501.0)}}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, max_distance_px=150.0, track_match_window=5
+    ) == []
+
+
+def test_filter_contacts_by_player_proximity_skips_contact_with_no_ball_position():
+    assert filter_contacts_by_player_proximity([10], {}, {10: {1: (0.0, 0.0, 0.0, 0.0)}}) == []
+
+
+def test_filter_contacts_by_player_proximity_preserves_order_and_partial_results():
+    ball_positions = {10: (0.0, 0.0), 20: (0.0, 0.0), 30: (0.0, 0.0)}
+    players = {
+        10: {1: (50.0, 0.0, 50.0, 0.0)},   # kept - nearby
+        20: {1: (500.0, 0.0, 500.0, 0.0)},  # dropped - far
+        30: {1: (10.0, 0.0, 10.0, 0.0)},   # kept - nearby
+    }
+    assert filter_contacts_by_player_proximity([10, 20, 30], ball_positions, players, max_distance_px=150.0) == [10, 30]
 
 
 # --- attribute_touches: temporal-window rescue ---

@@ -2,8 +2,8 @@
   "video": "SLAP_SVIT_1z_upr.mp4",
   "fps": 29.97002997002997,
   "frame_range": [
-    12000,
-    20999
+    0,
+    45940
   ],
   "rallies": [
     {
@@ -63,12 +63,6 @@
       "time_s": 404.6
     },
     {
-      "frame_idx": 12147,
-      "track_id": null,
-      "distance_px": 277.1,
-      "time_s": 405.3
-    },
-    {
       "frame_idx": 12175,
       "track_id": 14,
       "distance_px": 31.2,
@@ -87,22 +81,10 @@
       "time_s": 408.61
     },
     {
-      "frame_idx": 12272,
-      "track_id": null,
-      "distance_px": 227.8,
-      "time_s": 409.48
-    },
-    {
       "frame_idx": 12296,
       "track_id": 20,
       "distance_px": 0.0,
       "time_s": 410.28
-    },
-    {
-      "frame_idx": 12318,
-      "track_id": null,
-      "distance_px": 196.2,
-      "time_s": 411.01
     },
     {
       "frame_idx": 12339,
@@ -189,22 +171,10 @@
       "time_s": 419.99
     },
     {
-      "frame_idx": 12607,
-      "track_id": null,
-      "distance_px": 200.1,
-      "time_s": 420.65
-    },
-    {
       "frame_idx": 12620,
       "track_id": 93,
       "distance_px": 104.0,
       "time_s": 421.09
-    },
-    {
-      "frame_idx": 12631,
-      "track_id": null,
-      "distance_px": 789.9,
-      "time_s": 421.45
     },
     {
       "frame_idx": 12645,
@@ -285,34 +255,16 @@
       "time_s": 434.07
     },
     {
-      "frame_idx": 13033,
-      "track_id": null,
-      "distance_px": 191.5,
-      "time_s": 434.87
-    },
-    {
       "frame_idx": 13055,
       "track_id": 186,
       "distance_px": 51.4,
       "time_s": 435.6
     },
     {
-      "frame_idx": 13071,
-      "track_id": null,
-      "distance_px": 231.7,
-      "time_s": 436.14
-    },
-    {
       "frame_idx": 13080,
       "track_id": 168,
       "distance_px": 119.3,
       "time_s": 436.44
-    },
-    {
-      "frame_idx": 13082,
-      "track_id": null,
-      "distance_px": 179.8,
-      "time_s": 436.5
     },
     {
       "frame_idx": 13105,
@@ -327,12 +279,6 @@
       "time_s": 439.37
     },
     {
-      "frame_idx": 13187,
-      "track_id": null,
-      "distance_px": 202.4,
-      "time_s": 440.01
-    },
-    {
       "frame_idx": 13249,
       "track_id": 205,
       "distance_px": 129.6,
@@ -343,12 +289,6 @@
       "track_id": 189,
       "distance_px": 0.0,
       "time_s": 442.54
-    },
-    {
-      "frame_idx": 13292,
-      "track_id": null,
-      "distance_px": 323.6,
-      "time_s": 443.51
     },
     {
       "frame_idx": 13318,
@@ -381,22 +321,10 @@
       "time_s": 446.08
     },
     {
-      "frame_idx": 13395,
-      "track_id": null,
-      "distance_px": 372.4,
-      "time_s": 446.95
-    },
-    {
       "frame_idx": 13405,
       "track_id": 229,
       "distance_px": 0.0,
       "time_s": 447.28
-    },
-    {
-      "frame_idx": 13411,
-      "track_id": null,
-      "distance_px": 232.5,
-      "time_s": 447.48
     },
     {
       "frame_idx": 13422,
@@ -447,22 +375,10 @@
       "time_s": 454.92
     },
     {
-      "frame_idx": 13663,
-      "track_id": null,
-      "distance_px": 221.5,
-      "time_s": 455.89
-    },
-    {
       "frame_idx": 13685,
       "track_id": 275,
       "distance_px": 15.7,
       "time_s": 456.62
-    },
-    {
-      "frame_idx": 13710,
-      "track_id": null,
-      "distance_px": 301.0,
-      "time_s": 457.46
     },
     {
       "frame_idx": 13748,
@@ -519,12 +435,6 @@
       "time_s": 475.71
     },
     {
-      "frame_idx": 14280,
-      "track_id": null,
-      "distance_px": 303.3,
-      "time_s": 476.48
-    },
-    {
       "frame_idx": 14302,
       "track_id": 325,
       "distance_px": 22.1,
@@ -555,22 +465,10 @@
       "time_s": 478.81
     },
     {
-      "frame_idx": 14383,
-      "track_id": null,
-      "distance_px": 198.8,
-      "time_s": 479.91
-    },
-    {
       "frame_idx": 14405,
       "track_id": 414,
       "distance_px": 46.9,
       "time_s": 480.65
-    },
-    {
-      "frame_idx": 14430,
-      "track_id": null,
-      "distance_px": 306.2,
-      "time_s": 481.48
     },
     {
       "frame_idx": 14453,
@@ -579,22 +477,10 @@
       "time_s": 482.25
     },
     {
-      "frame_idx": 14477,
-      "track_id": null,
-      "distance_px": 368.6,
-      "time_s": 483.05
-    },
-    {
       "frame_idx": 14498,
       "track_id": 410,
       "distance_px": 6.4,
       "time_s": 483.75
-    },
-    {
-      "frame_idx": 14516,
-      "track_id": null,
-      "distance_px": 217.7,
-      "time_s": 484.35
     },
     {
       "frame_idx": 14538,
@@ -607,12 +493,6 @@
       "track_id": 358,
       "distance_px": 18.1,
       "time_s": 486.69
-    },
-    {
-      "frame_idx": 14608,
-      "track_id": null,
-      "distance_px": 225.3,
-      "time_s": 487.42
     },
     {
       "frame_idx": 14639,
@@ -699,12 +579,6 @@
       "time_s": 505.61
     },
     {
-      "frame_idx": 15181,
-      "track_id": null,
-      "distance_px": 290.9,
-      "time_s": 506.54
-    },
-    {
       "frame_idx": 15206,
       "track_id": null,
       "distance_px": 122.5,
@@ -753,12 +627,6 @@
       "time_s": 513.28
     },
     {
-      "frame_idx": 15441,
-      "track_id": null,
-      "distance_px": 298.6,
-      "time_s": 515.21
-    },
-    {
       "frame_idx": 15641,
       "track_id": 607,
       "distance_px": 141.9,
@@ -777,22 +645,10 @@
       "time_s": 523.96
     },
     {
-      "frame_idx": 15725,
-      "track_id": null,
-      "distance_px": 212.7,
-      "time_s": 524.69
-    },
-    {
       "frame_idx": 15748,
       "track_id": 602,
       "distance_px": 16.2,
       "time_s": 525.46
-    },
-    {
-      "frame_idx": 15754,
-      "track_id": null,
-      "distance_px": 172.3,
-      "time_s": 525.66
     },
     {
       "frame_idx": 15812,
@@ -813,22 +669,10 @@
       "time_s": 530.9
     },
     {
-      "frame_idx": 15926,
-      "track_id": null,
-      "distance_px": 172.9,
-      "time_s": 531.4
-    },
-    {
       "frame_idx": 15945,
       "track_id": 639,
       "distance_px": 34.2,
       "time_s": 532.03
-    },
-    {
-      "frame_idx": 15970,
-      "track_id": null,
-      "distance_px": 308.0,
-      "time_s": 532.87
     },
     {
       "frame_idx": 15998,
@@ -861,34 +705,10 @@
       "time_s": 536.54
     },
     {
-      "frame_idx": 16211,
-      "track_id": null,
-      "distance_px": 168.5,
-      "time_s": 540.91
-    },
-    {
       "frame_idx": 16236,
       "track_id": 714,
       "distance_px": 149.5,
       "time_s": 541.74
-    },
-    {
-      "frame_idx": 16251,
-      "track_id": null,
-      "distance_px": 285.2,
-      "time_s": 542.24
-    },
-    {
-      "frame_idx": 16262,
-      "track_id": null,
-      "distance_px": 310.8,
-      "time_s": 542.61
-    },
-    {
-      "frame_idx": 16278,
-      "track_id": null,
-      "distance_px": 203.0,
-      "time_s": 543.14
     },
     {
       "frame_idx": 16301,
@@ -919,12 +739,6 @@
       "track_id": 759,
       "distance_px": 133.8,
       "time_s": 547.95
-    },
-    {
-      "frame_idx": 16585,
-      "track_id": null,
-      "distance_px": 481.8,
-      "time_s": 553.39
     },
     {
       "frame_idx": 16592,
@@ -985,12 +799,6 @@
       "track_id": 828,
       "distance_px": 94.6,
       "time_s": 563.63
-    },
-    {
-      "frame_idx": 16898,
-      "track_id": null,
-      "distance_px": 231.8,
-      "time_s": 563.83
     },
     {
       "frame_idx": 16907,
@@ -1083,12 +891,6 @@
       "time_s": 571.9
     },
     {
-      "frame_idx": 17151,
-      "track_id": null,
-      "distance_px": 233.9,
-      "time_s": 572.27
-    },
-    {
       "frame_idx": 17157,
       "track_id": 838,
       "distance_px": 0.0,
@@ -1113,40 +915,16 @@
       "time_s": 577.38
     },
     {
-      "frame_idx": 17333,
-      "track_id": null,
-      "distance_px": 181.4,
-      "time_s": 578.34
-    },
-    {
       "frame_idx": 17361,
       "track_id": 892,
       "distance_px": 35.7,
       "time_s": 579.28
     },
     {
-      "frame_idx": 17388,
-      "track_id": null,
-      "distance_px": 167.5,
-      "time_s": 580.18
-    },
-    {
       "frame_idx": 17407,
       "track_id": null,
       "distance_px": 56.2,
       "time_s": 580.81
-    },
-    {
-      "frame_idx": 17428,
-      "track_id": null,
-      "distance_px": 180.6,
-      "time_s": 581.51
-    },
-    {
-      "frame_idx": 17572,
-      "track_id": null,
-      "distance_px": 189.8,
-      "time_s": 586.32
     },
     {
       "frame_idx": 17603,
@@ -1173,18 +951,6 @@
       "time_s": 617.05
     },
     {
-      "frame_idx": 18514,
-      "track_id": null,
-      "distance_px": 431.5,
-      "time_s": 617.75
-    },
-    {
-      "frame_idx": 18528,
-      "track_id": null,
-      "distance_px": 361.7,
-      "time_s": 618.22
-    },
-    {
       "frame_idx": 18575,
       "track_id": 1008,
       "distance_px": 55.2,
@@ -1203,22 +969,10 @@
       "time_s": 620.85
     },
     {
-      "frame_idx": 18624,
-      "track_id": null,
-      "distance_px": 176.1,
-      "time_s": 621.42
-    },
-    {
       "frame_idx": 18636,
       "track_id": 1004,
       "distance_px": 10.5,
       "time_s": 621.82
-    },
-    {
-      "frame_idx": 18661,
-      "track_id": null,
-      "distance_px": 356.4,
-      "time_s": 622.66
     },
     {
       "frame_idx": 18680,
@@ -1227,22 +981,10 @@
       "time_s": 623.29
     },
     {
-      "frame_idx": 18687,
-      "track_id": null,
-      "distance_px": 488.8,
-      "time_s": 623.52
-    },
-    {
       "frame_idx": 18701,
       "track_id": 1004,
       "distance_px": 19.8,
       "time_s": 623.99
-    },
-    {
-      "frame_idx": 18727,
-      "track_id": null,
-      "distance_px": 321.0,
-      "time_s": 624.86
     },
     {
       "frame_idx": 18752,
@@ -1251,22 +993,10 @@
       "time_s": 625.69
     },
     {
-      "frame_idx": 18777,
-      "track_id": null,
-      "distance_px": 366.9,
-      "time_s": 626.53
-    },
-    {
       "frame_idx": 18812,
       "track_id": 1051,
       "distance_px": 76.8,
       "time_s": 627.69
-    },
-    {
-      "frame_idx": 18820,
-      "track_id": null,
-      "distance_px": 272.9,
-      "time_s": 627.96
     },
     {
       "frame_idx": 18842,
@@ -1293,12 +1023,6 @@
       "time_s": 630.46
     },
     {
-      "frame_idx": 18928,
-      "track_id": null,
-      "distance_px": 155.3,
-      "time_s": 631.56
-    },
-    {
       "frame_idx": 18948,
       "track_id": 1087,
       "distance_px": 76.2,
@@ -1317,12 +1041,6 @@
       "time_s": 633.87
     },
     {
-      "frame_idx": 19017,
-      "track_id": null,
-      "distance_px": 196.5,
-      "time_s": 634.53
-    },
-    {
       "frame_idx": 19098,
       "track_id": 1118,
       "distance_px": 52.2,
@@ -1333,12 +1051,6 @@
       "track_id": 1123,
       "distance_px": 96.5,
       "time_s": 638.04
-    },
-    {
-      "frame_idx": 19127,
-      "track_id": null,
-      "distance_px": 182.0,
-      "time_s": 638.2
     },
     {
       "frame_idx": 19141,
@@ -1353,22 +1065,10 @@
       "time_s": 638.94
     },
     {
-      "frame_idx": 19164,
-      "track_id": null,
-      "distance_px": 197.9,
-      "time_s": 639.44
-    },
-    {
       "frame_idx": 19177,
       "track_id": 1139,
       "distance_px": 70.8,
       "time_s": 639.87
-    },
-    {
-      "frame_idx": 19195,
-      "track_id": null,
-      "distance_px": 259.1,
-      "time_s": 640.47
     },
     {
       "frame_idx": 19214,
@@ -1389,46 +1089,16 @@
       "time_s": 641.97
     },
     {
-      "frame_idx": 19258,
-      "track_id": null,
-      "distance_px": 205.7,
-      "time_s": 642.58
-    },
-    {
-      "frame_idx": 19265,
-      "track_id": null,
-      "distance_px": 199.1,
-      "time_s": 642.81
-    },
-    {
-      "frame_idx": 19271,
-      "track_id": null,
-      "distance_px": 157.7,
-      "time_s": 643.01
-    },
-    {
       "frame_idx": 19293,
       "track_id": 1154,
       "distance_px": 141.9,
       "time_s": 643.74
     },
     {
-      "frame_idx": 19320,
-      "track_id": null,
-      "distance_px": 532.4,
-      "time_s": 644.64
-    },
-    {
       "frame_idx": 19397,
       "track_id": 1171,
       "distance_px": 0.0,
       "time_s": 647.21
-    },
-    {
-      "frame_idx": 19424,
-      "track_id": null,
-      "distance_px": 234.6,
-      "time_s": 648.11
     },
     {
       "frame_idx": 19447,
@@ -1449,34 +1119,16 @@
       "time_s": 649.62
     },
     {
-      "frame_idx": 19482,
-      "track_id": null,
-      "distance_px": 177.1,
-      "time_s": 650.05
-    },
-    {
       "frame_idx": 19513,
       "track_id": null,
       "distance_px": 223.0,
       "time_s": 651.08
     },
     {
-      "frame_idx": 19535,
-      "track_id": null,
-      "distance_px": 459.8,
-      "time_s": 651.82
-    },
-    {
       "frame_idx": 19555,
       "track_id": 1192,
       "distance_px": 34.1,
       "time_s": 652.49
-    },
-    {
-      "frame_idx": 19580,
-      "track_id": null,
-      "distance_px": 333.8,
-      "time_s": 653.32
     },
     {
       "frame_idx": 19603,
@@ -1503,12 +1155,6 @@
       "time_s": 655.79
     },
     {
-      "frame_idx": 19696,
-      "track_id": null,
-      "distance_px": 241.3,
-      "time_s": 657.19
-    },
-    {
       "frame_idx": 19729,
       "track_id": 1160,
       "distance_px": 49.0,
@@ -1525,12 +1171,6 @@
       "track_id": 1157,
       "distance_px": 0.0,
       "time_s": 659.76
-    },
-    {
-      "frame_idx": 19783,
-      "track_id": null,
-      "distance_px": 274.8,
-      "time_s": 660.09
     },
     {
       "frame_idx": 19789,
@@ -1557,22 +1197,10 @@
       "time_s": 665.93
     },
     {
-      "frame_idx": 19985,
-      "track_id": null,
-      "distance_px": 380.0,
-      "time_s": 666.83
-    },
-    {
       "frame_idx": 20013,
       "track_id": 1269,
       "distance_px": 56.7,
       "time_s": 667.77
-    },
-    {
-      "frame_idx": 20037,
-      "track_id": null,
-      "distance_px": 323.3,
-      "time_s": 668.57
     },
     {
       "frame_idx": 20065,
@@ -1629,12 +1257,6 @@
       "time_s": 676.21
     },
     {
-      "frame_idx": 20296,
-      "track_id": null,
-      "distance_px": 424.3,
-      "time_s": 677.21
-    },
-    {
       "frame_idx": 20350,
       "track_id": 1336,
       "distance_px": 0.0,
@@ -1677,12 +1299,6 @@
       "time_s": 683.98
     },
     {
-      "frame_idx": 20528,
-      "track_id": null,
-      "distance_px": 360.1,
-      "time_s": 684.95
-    },
-    {
       "frame_idx": 20552,
       "track_id": 1345,
       "distance_px": 15.7,
@@ -1719,12 +1335,6 @@
       "time_s": 693.09
     },
     {
-      "frame_idx": 20798,
-      "track_id": null,
-      "distance_px": 153.9,
-      "time_s": 693.96
-    },
-    {
       "frame_idx": 20818,
       "track_id": null,
       "distance_px": 48.5,
@@ -1741,12 +1351,6 @@
       "track_id": 1421,
       "distance_px": 0.0,
       "time_s": 695.66
-    },
-    {
-      "frame_idx": 20875,
-      "track_id": null,
-      "distance_px": 154.6,
-      "time_s": 696.53
     },
     {
       "frame_idx": 20888,
