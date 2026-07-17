@@ -144,7 +144,7 @@ def draw_frame(frame, frame_idx: int, frame_players: dict, ball_by_frame: dict, 
 
 def review_loop(video_path: Path, out_path: Path, todo: list[dict], all_touches_count: int,
                  rally_filter: int | None, rallies: list[dict], start_frame: int, end_frame: int,
-                 frame_players: dict, ball_by_frame: dict) -> None:
+                 frame_players: dict, ball_by_frame: dict, display_scale: float = 1.0) -> None:
     cap = cv2.VideoCapture(str(video_path))
     window = "review touches (SPACE=correct x=false click=wrong u=unattributable r=replay p/n=skip q=quit)"
     cv2.namedWindow(window)
@@ -152,8 +152,12 @@ def review_loop(video_path: Path, out_path: Path, todo: list[dict], all_touches_
 
     def on_click(event, x, y, flags, userdata):
         if event == cv2.EVENT_LBUTTONDOWN and state["cur_frame"] is not None:
+            # boxes are drawn/stored at native resolution (see draw_frame) - the
+            # window itself may be shown smaller (display_scale), so a click needs
+            # scaling back up to native coordinates before hit-testing against them.
+            native_point = (x / display_scale, y / display_scale)
             boxes = boxes_for_frame(frame_players, state["cur_frame"])
-            tid = find_clicked_track((x, y), boxes)
+            tid = find_clicked_track(native_point, boxes)
             if tid is not None:
                 state["decision"] = ("wrong", tid)
 
@@ -186,7 +190,11 @@ def review_loop(video_path: Path, out_path: Path, todo: list[dict], all_touches_
         while action is None:
             for f, frame in cached:
                 state["cur_frame"] = f
-                cv2.imshow(window, draw_frame(frame, f, frame_players, ball_by_frame, touch))
+                display = draw_frame(frame, f, frame_players, ball_by_frame, touch)
+                if display_scale != 1.0:
+                    display = cv2.resize(display, (int(display.shape[1] * display_scale),
+                                                     int(display.shape[0] * display_scale)))
+                cv2.imshow(window, display)
                 key = cv2.waitKey(PLAYBACK_DELAY_MS) & 0xFF
                 if state["decision"] is not None:
                     action = state["decision"]
@@ -236,6 +244,9 @@ def main():
     parser.add_argument("--detections-csv", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--rally", type=int, default=None, help="only review touches within this rally index")
+    parser.add_argument("--display-scale", type=float, default=1.0,
+                         help="shrink (e.g. 0.6) or grow the review window if the native frame "
+                         "resolution doesn't fit your screen - click hit-testing is unaffected")
     args = parser.parse_args()
 
     stats = json.loads(args.stats.read_text())
@@ -262,7 +273,7 @@ def main():
     ball_by_frame = interpolate_gaps_ballistic(ball_states, MAX_BALL_GAP_FRAMES)
 
     review_loop(args.video, args.out, todo, len(scoped_touches), args.rally, rallies,
-                start_frame, end_frame, frame_players, ball_by_frame)
+                start_frame, end_frame, frame_players, ball_by_frame, display_scale=args.display_scale)
 
 
 if __name__ == "__main__":
