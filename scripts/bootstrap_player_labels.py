@@ -17,9 +17,15 @@ reliable. For each candidate frame, in order:
      filtering already picks these up for a manual pass.
 
 The dense clustering-positive candidates are NOT good bootstrap targets (that's the
-whole point of selecting them - they're where the detector is weakest) and should be
-labeled manually via label_ball.py instead; this script still processes them if asked,
-but expect most to fall through to tier 3.
+whole point of selecting them - they're where the detector is weakest): a frame can
+easily have one or more confident boxes AND still be missing a clustered/occluded
+player the detector didn't find at all, so "has a confident box" does not imply "has
+every player." By default this script only processes rows with
+selection_reason=random_negative for exactly that reason - clustering candidates are
+left untouched (still zero) for manual review in label_ball.py. Pass
+--include-clustering-candidates to override this (not recommended - only for cases
+where you've separately confirmed the local detector's recall is trustworthy on that
+manifest).
 
 Output lands in the same {dataset-root}/{split}/{images,labels}/ layout label_ball.py
 writes to (reuses its path/save helpers directly), so train_player.py picks it up with
@@ -42,6 +48,7 @@ from gemini_verify import DEFAULT_MODEL, verify_player_frames
 from label_ball import label_path_for, save_frame
 
 PLAYER_DATASET_ROOT = Path("data/self_labeled_players")
+SAFE_SELECTION_REASONS = {"random_negative"}
 
 # Stricter than production PLAYER_CONF (0.4): this box set becomes a ground-truth
 # training label with no human review, so it needs to be a set we'd trust
@@ -65,11 +72,22 @@ def main():
     parser.add_argument("--gemini-model", default=None, help="Passed through to gemini_verify.py (its own default if unset)")
     parser.add_argument("--skip-gemini", action="store_true",
                          help="Skip tier 2 entirely - useful when the Gemini key/quota is known to be unavailable")
+    parser.add_argument("--include-clustering-candidates", action="store_true",
+                         help="Also bootstrap selection_reason=clustering_candidate rows (NOT recommended - "
+                              "see module docstring for why this risks baking incomplete ground truth into "
+                              "exactly the frames this dataset most needs to be correct on)")
     args = parser.parse_args()
 
     rows = list(csv.DictReader(open(args.manifest)))
+    if not args.include_clustering_candidates:
+        skipped = [r for r in rows if r["selection_reason"] not in SAFE_SELECTION_REASONS]
+        if skipped:
+            print(f"skipping {len(skipped)} clustering-candidate rows (bootstrap only handles "
+                  f"selection_reason={sorted(SAFE_SELECTION_REASONS)} by default) - label these "
+                  f"manually via label_ball.py instead")
+        rows = [r for r in rows if r["selection_reason"] in SAFE_SELECTION_REASONS]
     todo = [r for r in rows if not label_path_for(r, args.dataset_root).exists()]
-    print(f"{len(rows)} total candidates, {len(rows) - len(todo)} already labeled, {len(todo)} remaining")
+    print(f"{len(rows)} eligible candidates, {len(rows) - len(todo)} already labeled, {len(todo)} remaining")
 
     tier1, needs_gemini = [], []
     for row in todo:
