@@ -23,19 +23,20 @@ import cv2
 DATASET_ROOT = Path("data/self_labeled")
 
 
-def label_path_for(row: dict) -> Path:
+def label_path_for(row: dict, dataset_root: Path = DATASET_ROOT) -> Path:
     stem = f"{row['clip']}_{Path(row['frame_id']).name.rsplit('.', 1)[0]}"
-    return DATASET_ROOT / row["split"] / "labels" / f"{stem}.txt"
+    return dataset_root / row["split"] / "labels" / f"{stem}.txt"
 
 
-def image_path_for(row: dict) -> Path:
+def image_path_for(row: dict, dataset_root: Path = DATASET_ROOT) -> Path:
     stem = f"{row['clip']}_{Path(row['frame_id']).name.rsplit('.', 1)[0]}"
-    return DATASET_ROOT / row["split"] / "images" / f"{stem}.jpg"
+    return dataset_root / row["split"] / "images" / f"{stem}.jpg"
 
 
-def save_frame(row: dict, boxes: list[tuple[int, int, int, int]], img_w: int, img_h: int):
-    label_path = label_path_for(row)
-    image_path = image_path_for(row)
+def save_frame(row: dict, boxes: list[tuple[int, int, int, int]], img_w: int, img_h: int,
+               dataset_root: Path = DATASET_ROOT):
+    label_path = label_path_for(row, dataset_root)
+    image_path = image_path_for(row, dataset_root)
     label_path.parent.mkdir(parents=True, exist_ok=True)
     image_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -91,10 +92,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=Path("data/annotations/label_candidates.csv"))
     parser.add_argument("--display-scale", type=float, default=1.5)
+    parser.add_argument("--dataset-root", type=Path, default=DATASET_ROOT,
+                         help="output dataset root - override for a non-ball dataset "
+                         "(e.g. data/self_labeled_players) so labels don't mix with the ball dataset")
     args = parser.parse_args()
 
     rows = list(csv.DictReader(open(args.manifest)))
-    todo = [r for r in rows if not label_path_for(r).exists()]
+    todo = [r for r in rows if not label_path_for(r, args.dataset_root).exists()]
     print(f"{len(rows)} total candidates, {len(rows) - len(todo)} already labeled, {len(todo)} remaining")
 
     if not todo:
@@ -125,10 +129,10 @@ def main():
             if key == ord("z") and drawer.boxes:
                 drawer.boxes.pop()
             elif key == ord("x"):
-                save_frame(row, [], w, h)
+                save_frame(row, [], w, h, args.dataset_root)
                 result = "next"
             elif key in (ord("n"), 13, 32):
-                save_frame(row, drawer.native_boxes(), w, h)
+                save_frame(row, drawer.native_boxes(), w, h, args.dataset_root)
                 result = "next"
             elif key == ord("s"):
                 result = "next"
