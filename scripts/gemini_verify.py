@@ -20,7 +20,7 @@ Usage:
     python scripts/gemini_verify.py --frames-dir data/annotations/detect_review --out results.json
 
     python scripts/gemini_verify.py --frames-dir data/annotations/detect_review --concurrency 16 --out results.json
-    python scripts/gemini_verify.py --image data/frames/online_match_01/frame_0042.jpg --model gemini-2.5-flash
+    python scripts/gemini_verify.py --image data/frames/online_match_01/frame_0042.jpg --model gemini-pro-latest
 """
 
 import argparse
@@ -35,7 +35,15 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import errors, types
 
-DEFAULT_MODEL = "gemini-2.5-pro"
+# Dated model names (gemini-2.5-pro, gemini-2.5-flash, ...) get deprecated out from
+# under callers with a 404 ("no longer available to new users") even though they
+# still show up in client.models.list() - found 2026-07-19 when every tier-2 Gemini
+# call in bootstrap_player_labels.py silently failed and fell through to tier 3
+# (bootstrap_ball_labels.py's tier 2 was equally broken, just not noticed since its
+# try/except degrades quietly to "leave for manual review"). The "-latest" alias
+# floats to whatever the current stable model actually is, so it doesn't rot the
+# same way - confirmed working via a live call before switching to it.
+DEFAULT_MODEL = "gemini-flash-latest"
 DEFAULT_CONCURRENCY = 8
 MAX_RETRIES = 6
 BASE_BACKOFF_SECONDS = 2.0
