@@ -1,15 +1,24 @@
-"""Interactive click-to-box tool for labeling the ball in candidate frames.
+"""Interactive click-to-box tool for labeling the ball (or, with --prefill-players,
+players) in candidate frames.
 
 Usage:
     python scripts/label_ball.py --manifest data/annotations/label_candidates.csv
 
+    # player labeling: pre-load each frame with the current player detector's own
+    # boxes so you correct (add missed players, delete wrong boxes) instead of
+    # drawing every box from scratch
+    python scripts/label_ball.py --manifest data/annotations/label_candidates_X_players1.csv \
+        --dataset-root data/self_labeled_players --prefill-players
+
 Controls:
     left-click-drag  draw a box (can draw more than one per frame)
+    left-click (no drag) on an existing box   delete that box
     z                undo last box on this frame
-    x                confirm as "no ball" (ignores any pending boxes)
-    n / Space / Enter  confirm frame with whatever boxes are drawn (0 = no ball)
+    x                confirm as "no ball"/"no players" (ignores any pending boxes)
+    n / Space / Enter  confirm frame with whatever boxes are drawn (0 = none)
     s                skip (leave unlabeled, revisit later)
-    b / Backspace    go back one frame
+    b / Backspace    go back one frame (re-seeds from the detector if --prefill-players,
+                     discarding any edits made last time you were on that frame)
     q / Esc          quit
 """
 
@@ -53,9 +62,10 @@ def save_frame(row: dict, boxes: list[tuple[int, int, int, int]], img_w: int, im
 
 
 class BoxDrawer:
-    def __init__(self, scale: float):
+    def __init__(self, scale: float, seed_boxes: list[tuple[float, float, float, float]] | None = None):
         self.scale = scale
-        self.boxes = []  # display-space boxes (x1,y1,x2,y2)
+        # display-space boxes (x1,y1,x2,y2) - seed_boxes are native-pixel-space, scaled here
+        self.boxes = [(x1 * scale, y1 * scale, x2 * scale, y2 * scale) for x1, y1, x2, y2 in (seed_boxes or [])]
         self.dragging = False
         self.start = None
         self.cur = None
@@ -73,6 +83,16 @@ class BoxDrawer:
             x2, y2 = x, y
             if abs(x2 - x1) > 3 and abs(y2 - y1) > 3:
                 self.boxes.append((min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2)))
+            else:
+                # A click (negligible drag) on an existing box deletes it - the main
+                # interaction when correcting pre-filled boxes instead of drawing new
+                # ones. Deletes the most recently added box containing the point, so
+                # overlapping boxes delete newest-first.
+                for i in range(len(self.boxes) - 1, -1, -1):
+                    bx1, by1, bx2, by2 = self.boxes[i]
+                    if bx1 <= x <= bx2 and by1 <= y <= by2:
+                        del self.boxes[i]
+                        break
             self.start = None
             self.cur = None
 
@@ -95,7 +115,19 @@ def main():
     parser.add_argument("--dataset-root", type=Path, default=DATASET_ROOT,
                          help="output dataset root - override for a non-ball dataset "
                          "(e.g. data/self_labeled_players) so labels don't mix with the ball dataset")
+    parser.add_argument("--prefill-players", action="store_true",
+                         help="pre-load each frame with the current player detector's own boxes "
+                         "so you correct (delete wrong boxes, add missed ones) instead of drawing "
+                         "from scratch - see the module docstring for the click-to-delete control")
+    parser.add_argument("--prefill-conf", type=float, default=None,
+                         help="confidence floor for pre-filled boxes (default: PLAYER_CONF, the "
+                         "same threshold production inference uses)")
     args = parser.parse_args()
+
+    detect_players = prefill_conf = None
+    if args.prefill_players:
+        from detect_frame import PLAYER_CONF, detect_players
+        prefill_conf = args.prefill_conf if args.prefill_conf is not None else PLAYER_CONF
 
     rows = list(csv.DictReader(open(args.manifest)))
     todo = [r for r in rows if not label_path_for(r, args.dataset_root).exists()]
@@ -105,7 +137,7 @@ def main():
         print("Nothing left to label.")
         return
 
-    window = "label_ball  (drag=box, z=undo, x=no-ball, n/space=confirm, s=skip, b=back, q=quit)"
+    window = "label_ball  (drag=box, click=delete, z=undo, x=no-box, n/space=confirm, s=skip, b=back, q=quit)"
     cv2.namedWindow(window)
 
     i = 0
@@ -115,7 +147,11 @@ def main():
         h, w = img.shape[:2]
         disp = cv2.resize(img, (int(w * args.display_scale), int(h * args.display_scale)))
 
-        drawer = BoxDrawer(args.display_scale)
+        seed_boxes = None
+        if args.prefill_players:
+            seed_boxes = [tuple(d["bbox"]) for d in detect_players(row["image_path"], min_conf=prefill_conf)]
+
+        drawer = BoxDrawer(args.display_scale, seed_boxes)
         cv2.setMouseCallback(window, drawer.on_mouse)
 
         result = None
