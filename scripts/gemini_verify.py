@@ -20,7 +20,7 @@ Usage:
     python scripts/gemini_verify.py --frames-dir data/annotations/detect_review --out results.json
 
     python scripts/gemini_verify.py --frames-dir data/annotations/detect_review --concurrency 16 --out results.json
-    python scripts/gemini_verify.py --image data/frames/online_match_01/frame_0042.jpg --model gemini-2.5-flash
+    python scripts/gemini_verify.py --image data/frames/online_match_01/frame_0042.jpg --model gemini-pro-latest
 """
 
 import argparse
@@ -35,7 +35,15 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import errors, types
 
-DEFAULT_MODEL = "gemini-2.5-pro"
+# Dated model names (gemini-2.5-pro, gemini-2.5-flash, ...) get deprecated out from
+# under callers with a 404 ("no longer available to new users") even though they
+# still show up in client.models.list() - found 2026-07-19 when every tier-2 Gemini
+# call in bootstrap_player_labels.py silently failed and fell through to tier 3
+# (bootstrap_ball_labels.py's tier 2 was equally broken, just not noticed since its
+# try/except degrades quietly to "leave for manual review"). The "-latest" alias
+# floats to whatever the current stable model actually is, so it doesn't rot the
+# same way - confirmed working via a live call before switching to it.
+DEFAULT_MODEL = "gemini-flash-latest"
 DEFAULT_CONCURRENCY = 8
 MAX_RETRIES = 6
 BASE_BACKOFF_SECONDS = 2.0
@@ -48,6 +56,19 @@ Look at the image and answer only with JSON matching this shape:
 
 - bbox is in pixel coordinates of the image as given (x1,y1 = top-left, x2,y2 = bottom-right), or null if ball_visible is false.
 - notes should be one short sentence explaining what you see (e.g. "ball is partially occluded by the net").
+Return only the JSON object, no markdown fences."""
+
+PLAYER_PROMPT = """You are assisting a volleyball computer-vision pipeline. A local YOLO \
+detector found some player boxes in this frame, but frames like this one (players \
+clustered/overlapping near the net or in a defensive scramble) are exactly where it is \
+known to sometimes miss a player entirely.
+
+Look at the image and identify every player on the court (not a referee, coach, or \
+spectator). Answer only with JSON matching this shape:
+{"player_count": int, "boxes": [[x1, y1, x2, y2], ...], "confidence": "high"|"medium"|"low", "notes": str}
+
+- boxes are in pixel coordinates of the image as given (x1,y1 = top-left, x2,y2 = bottom-right), one per player.
+- notes should be one short sentence about anything ambiguous (e.g. "one player mostly hidden behind another near the net").
 Return only the JSON object, no markdown fences."""
 
 
@@ -119,6 +140,44 @@ def verify_ball_frames(
     done = 0
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
         futures = {pool.submit(verify_ball_frame, path, model, client): path for path in image_paths}
+        for future in as_completed(futures):
+            path = futures[future]
+            try:
+                results[path] = future.result()
+            except Exception as exc:
+                results[path] = {"error": str(exc)}
+            done += 1
+            if done % 25 == 0:
+                print(f"  verified {done}/{len(image_paths)}")
+    return results
+
+
+def verify_player_frame(image_path: str, model: str = DEFAULT_MODEL, client: genai.Client | None = None) -> dict:
+    client = client or _get_client()
+    image_bytes = Path(image_path).read_bytes()
+    mime_type = "image/png" if image_path.lower().endswith(".png") else "image/jpeg"
+
+    response = _call_with_backoff(lambda: client.models.generate_content(
+        model=model,
+        contents=[
+            types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+            PLAYER_PROMPT,
+        ],
+        config=types.GenerateContentConfig(response_mime_type="application/json"),
+    ))
+    return json.loads(response.text)
+
+
+def verify_player_frames(
+    image_paths: list[str], model: str = DEFAULT_MODEL, concurrency: int = DEFAULT_CONCURRENCY,
+) -> dict[str, dict]:
+    """Batch sweep, same concurrency/backoff/error-isolation shape as verify_ball_frames -
+    see its docstring for why a single frame's failure doesn't abort the whole batch."""
+    client = _get_client()
+    results: dict[str, dict] = {}
+    done = 0
+    with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        futures = {pool.submit(verify_player_frame, path, model, client): path for path in image_paths}
         for future in as_completed(futures):
             path = futures[future]
             try:

@@ -2,16 +2,23 @@ import pytest
 
 from calibrate import COURT_LENGTH_M, COURT_WIDTH_M, NET_Y_M
 from derive_stats import (
+    REFEREE_ZONE_PX,
     Rally,
     Touch,
     attribute_touches,
     compute_zone_occupancy,
     detect_net_crossings,
+    distance_point_to_box,
+    filter_contacts_by_player_proximity,
     find_ball_contacts,
-    find_nearest_player,
+    find_nearest_player_by_box,
     frames_within_rallies,
+    in_referee_zone,
+    iou,
+    nearby_player_boxes,
     player_foot_point,
     segment_rallies,
+    smooth_ball_trajectory,
     stationary_track_ids,
     zone_for_position,
 )
@@ -52,10 +59,35 @@ def _parabola_y(center: int, width: int, peak: float) -> dict[int, float]:
     return {f: peak - (f - center) ** 2 for f in range(center - width, center + width + 1)}
 
 
+def _valley_y(center: int, width: int, trough: float) -> dict[int, float]:
+    """Synthetic ball trajectory: pixel-y dips to `trough` at `center` (screen-high =
+    physically high = a contact near the top of the ball's arc, e.g. a set or attack)
+    and rises off on both sides."""
+    return {f: trough + (f - center) ** 2 for f in range(center - width, center + width + 1)}
+
+
 def test_find_ball_contacts_detects_single_peak():
     y_by_frame = _parabola_y(center=20, width=10, peak=100.0)
     contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
     assert contacts == [20]
+
+
+def test_find_ball_contacts_detects_single_valley():
+    # A local minimum (ball near the top of its arc) must be detected too, not just
+    # maxima - this is the set/attack/block case, distinct from the dig/pass case above.
+    y_by_frame = _valley_y(center=20, width=10, trough=0.0)
+    contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    assert contacts == [20]
+
+
+def test_find_ball_contacts_detects_both_peak_and_valley_in_sequence():
+    # A realistic rally fragment: ball dips low (reception), rises to a high point
+    # (set/attack), far enough apart that both extrema get their own full window.
+    y_by_frame = {}
+    y_by_frame.update(_parabola_y(center=10, width=8, peak=100.0))
+    y_by_frame.update(_valley_y(center=40, width=8, trough=0.0))
+    contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    assert contacts == [10, 40]
 
 
 def test_find_ball_contacts_ignores_small_jitter():
@@ -86,6 +118,50 @@ def test_find_ball_contacts_separates_two_distant_peaks():
     y_by_frame.update(_parabola_y(center=40, width=8, peak=90.0))
     contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
     assert contacts == [10, 40]
+
+
+# --- smooth_ball_trajectory ---
+
+def test_smooth_ball_trajectory_suppresses_single_frame_spike():
+    # A lone single-frame detector-jitter spike in an otherwise flat trajectory - the
+    # median filter should throw it out entirely, not just dampen it.
+    y_by_frame = {f: 50.0 for f in range(20)}
+    y_by_frame[10] = 90.0
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    assert smoothed[10] == 50.0
+
+
+def test_smooth_ball_trajectory_preserves_real_extremum():
+    # A large, genuine vertical excursion (the shape a real contact produces) must
+    # still be detectable as a contact after smoothing - only single-frame jitter
+    # should be suppressed, not real reversals.
+    y_by_frame = _valley_y(center=30, width=20, trough=0.0)
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    contacts = find_ball_contacts(smoothed, window=5, min_excursion_px=15.0)
+    assert any(28 <= c <= 32 for c in contacts)
+
+
+def test_smooth_ball_trajectory_reduces_spurious_close_contacts():
+    # Small-amplitude jitter near an otherwise-stable ball position (e.g. the ball
+    # briefly occluded by a hand during a real touch) - without smoothing this creates
+    # several independent nearby "contacts"; the median filter should collapse them.
+    y_by_frame = {f: 50.0 for f in range(40)}
+    y_by_frame[10] = 70.0
+    y_by_frame[14] = 30.0
+    y_by_frame[18] = 68.0
+    raw_contacts = find_ball_contacts(y_by_frame, window=5, min_excursion_px=15.0)
+    smoothed_contacts = find_ball_contacts(
+        smooth_ball_trajectory(y_by_frame, window=7), window=5, min_excursion_px=15.0
+    )
+    assert len(smoothed_contacts) < len(raw_contacts)
+
+
+def test_smooth_ball_trajectory_handles_boundary_frames():
+    # Frames near the start/end of the range have a truncated neighborhood - should
+    # smooth over whatever's available rather than requiring a full window.
+    y_by_frame = {0: 50.0, 1: 90.0, 2: 50.0, 3: 50.0}
+    smoothed = smooth_ball_trajectory(y_by_frame, window=7)
+    assert set(smoothed) == {0, 1, 2, 3}
 
 
 # --- detect_net_crossings ---
@@ -184,22 +260,49 @@ def test_frames_within_rallies_multiple_non_overlapping_rallies():
 
 # --- touch attribution ---
 
-def test_find_nearest_player_picks_closest():
-    candidates = {1: (0.0, 0.0), 2: (0.8, 0.0), 3: (5.0, 5.0)}
-    assert find_nearest_player((0.5, 0.0), candidates) == (2, pytest.approx(0.3))
+def test_iou_identical_boxes_is_one():
+    assert iou((0.0, 0.0, 10.0, 10.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(1.0)
 
 
-def test_find_nearest_player_empty_candidates_returns_none():
-    assert find_nearest_player((0.0, 0.0), {}) is None
+def test_iou_disjoint_boxes_is_zero():
+    assert iou((0.0, 0.0, 10.0, 10.0), (20.0, 20.0, 30.0, 30.0)) == 0.0
+
+
+def test_iou_partial_overlap():
+    # Two 10x10 boxes overlapping in a 5x10 region: intersection=50, union=150.
+    assert iou((0.0, 0.0, 10.0, 10.0), (5.0, 0.0, 15.0, 10.0)) == pytest.approx(50 / 150)
+
+
+def test_distance_point_to_box_is_zero_inside_box():
+    assert distance_point_to_box((5.0, 5.0), (0.0, 0.0, 10.0, 10.0)) == 0.0
+
+
+def test_distance_point_to_box_measures_to_nearest_edge():
+    # Point is directly above the box, 3 units clear of its top edge.
+    assert distance_point_to_box((5.0, -3.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(3.0)
+
+
+def test_distance_point_to_box_measures_to_nearest_corner():
+    assert distance_point_to_box((13.0, -4.0), (0.0, 0.0, 10.0, 10.0)) == pytest.approx(5.0)
+
+
+def test_find_nearest_player_by_box_picks_closest():
+    candidates = {1: (0.0, 0.0, 1.0, 1.0), 2: (0.8, 0.0, 1.8, 1.0), 3: (5.0, 5.0, 6.0, 6.0)}
+    tid, dist = find_nearest_player_by_box((0.5, 0.5), candidates)
+    assert tid == 1 and dist == pytest.approx(0.0)
+
+
+def test_find_nearest_player_by_box_empty_candidates_returns_none():
+    assert find_nearest_player_by_box((0.0, 0.0), {}) is None
 
 
 def test_attribute_touches_matches_nearest_player_per_frame():
     ball_positions = {10: (1.0, 1.0), 20: (5.0, 5.0)}
-    players_by_frame = {
-        10: {1: (1.1, 1.0), 2: (9.0, 9.0)},
-        20: {1: (1.1, 1.0), 2: (5.1, 5.0)},
+    player_boxes_by_frame = {
+        10: {1: (1.0, 1.0, 1.2, 1.2), 2: (9.0, 9.0, 9.2, 9.2)},
+        20: {1: (1.0, 1.0, 1.2, 1.2), 2: (5.0, 5.0, 5.2, 5.2)},
     }
-    touches = attribute_touches([10, 20], ball_positions, players_by_frame)
+    touches = attribute_touches([10, 20], ball_positions, player_boxes_by_frame)
     assert touches[0].frame_idx == 10 and touches[0].track_id == 1
     assert touches[1].frame_idx == 20 and touches[1].track_id == 2
 
@@ -207,12 +310,215 @@ def test_attribute_touches_matches_nearest_player_per_frame():
 def test_attribute_touches_no_players_tracked_is_unattributed():
     ball_positions = {10: (1.0, 1.0)}
     touches = attribute_touches([10], ball_positions, {10: {}})
-    assert touches == [Touch(frame_idx=10, track_id=None, distance_m=None)]
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_px=None)]
 
 
 def test_attribute_touches_skips_contact_with_no_ball_position():
-    touches = attribute_touches([10], {}, {10: {1: (0.0, 0.0)}})
+    touches = attribute_touches([10], {}, {10: {1: (0.0, 0.0, 0.0, 0.0)}})
     assert touches == []
+
+
+def test_attribute_touches_rejects_implausibly_distant_nearest_player():
+    # Nearest tracked player's box is 200px away - a spurious contact (e.g. dead-ball
+    # ball roll) or a real touch whose actual toucher wasn't tracked that frame, not a
+    # real touch by this distant player.
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (200.0, 0.0, 200.0, 0.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_px=200.0)]
+
+
+def test_attribute_touches_accepts_nearest_player_within_max_distance():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (50.0, 0.0, 50.0, 0.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_px=50.0)]
+
+
+def test_attribute_touches_uses_full_box_not_just_a_single_point():
+    # Ball sits inside the player's box (e.g. near their raised hands, far from their
+    # foot point) - should attribute even though the box's bottom-center is far away.
+    ball_positions = {10: (5.0, 2.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 20.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_px=0.0)]
+
+
+def test_attribute_touches_vetoes_tracked_candidate_when_raw_detection_is_closer():
+    # A tracked player passes the distance cutoff, but an untracked raw detection (the
+    # true toucher, never confirmed into a track - e.g. mid-jump motion blur) sits
+    # right on the ball. Should defer to unattributed rather than confidently naming
+    # the tracked-but-wrong player.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}  # tracked candidate, ~127px away
+    raw_boxes = {10: [(95.0, 95.0, 105.0, 105.0)]}  # untracked, right on the ball
+    touches = attribute_touches([10], ball_positions, players, raw_boxes, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_px=pytest.approx(127.28, rel=1e-3))]
+
+
+def test_attribute_touches_keeps_tracked_candidate_when_it_is_the_closest_raw_detection_too():
+    # The tracked candidate's own raw detection is (unsurprisingly) part of the raw
+    # set too - it shouldn't veto itself.
+    ball_positions = {10: (5.0, 5.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}
+    raw_boxes = {10: [(0.0, 0.0, 10.0, 10.0), (200.0, 200.0, 210.0, 210.0)]}
+    touches = attribute_touches([10], ball_positions, players, raw_boxes, max_distance_px=150.0)
+    assert touches == [Touch(frame_idx=10, track_id=1, distance_px=0.0)]
+
+
+def test_attribute_touches_no_veto_without_raw_boxes_argument():
+    # Backwards compatible: omitting raw_player_boxes_px_by_frame skips the veto check.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (0.0, 0.0, 10.0, 10.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0)
+    assert touches[0].track_id == 1
+
+
+# --- nearby_player_boxes ---
+
+def test_nearby_player_boxes_prefers_exact_frame():
+    pbf = {
+        8: {1: (0.0, 0.0, 1.0, 1.0)},
+        10: {1: (5.0, 5.0, 6.0, 6.0)},
+        12: {1: (9.0, 9.0, 10.0, 10.0)},
+    }
+    assert nearby_player_boxes(pbf, 10, window=5) == {1: (5.0, 5.0, 6.0, 6.0)}
+
+
+def test_nearby_player_boxes_falls_back_to_nearest_offset():
+    # Track 1 has no box at the exact frame - the nearest-in-time box (offset 2, not 4)
+    # should win.
+    pbf = {
+        6: {1: (0.0, 0.0, 1.0, 1.0)},
+        8: {1: (5.0, 5.0, 6.0, 6.0)},
+    }
+    assert nearby_player_boxes(pbf, 10, window=5) == {1: (5.0, 5.0, 6.0, 6.0)}
+
+
+def test_nearby_player_boxes_merges_multiple_tracks_from_different_offsets():
+    pbf = {
+        9: {1: (0.0, 0.0, 1.0, 1.0)},
+        11: {2: (5.0, 5.0, 6.0, 6.0)},
+    }
+    assert nearby_player_boxes(pbf, 10, window=5) == {
+        1: (0.0, 0.0, 1.0, 1.0),
+        2: (5.0, 5.0, 6.0, 6.0),
+    }
+
+
+def test_nearby_player_boxes_no_data_in_window_returns_empty():
+    assert nearby_player_boxes({}, 10, window=5) == {}
+
+
+def test_nearby_player_boxes_outside_window_is_ignored():
+    pbf = {2: {1: (0.0, 0.0, 1.0, 1.0)}}
+    assert nearby_player_boxes(pbf, 10, window=5) == {}
+
+
+# --- filter_contacts_by_player_proximity ---
+
+def test_filter_contacts_by_player_proximity_keeps_contact_with_tracked_player_nearby():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (50.0, 0.0, 50.0, 0.0)}}
+    assert filter_contacts_by_player_proximity([10], ball_positions, players, max_distance_px=150.0) == [10]
+
+
+def test_filter_contacts_by_player_proximity_drops_top_of_arc_with_nobody_near():
+    # Ball at a trajectory extremum, but every player is far away - the ordinary
+    # ballistic-peak-between-two-real-touches false positive this exists to catch.
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {1: (300.0, 300.0, 310.0, 310.0)}}
+    assert filter_contacts_by_player_proximity([10], ball_positions, players, max_distance_px=150.0) == []
+
+
+def test_filter_contacts_by_player_proximity_keeps_contact_via_raw_detection_only():
+    # No tracked player nearby, but an untracked raw detection is right there - the
+    # true toucher just wasn't confirmed into a track yet (see attribute_touches's
+    # own rescue logic for the same situation) - must not be discarded as a false
+    # positive on that basis alone.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {10: {1: (500.0, 500.0, 510.0, 510.0)}}
+    raw_boxes = {10: [(95.0, 95.0, 105.0, 105.0)]}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, raw_boxes, max_distance_px=150.0
+    ) == [10]
+
+
+def test_filter_contacts_by_player_proximity_keeps_contact_via_nearby_frame_track():
+    # Nobody tracked or raw at the exact contact frame, but a track shows up a couple
+    # frames later right where the ball was - confirmation lag, not a real absence.
+    ball_positions = {10: (5.0, 5.0)}
+    players = {10: {}, 12: {7: (5.0, 5.0, 6.0, 6.0)}}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, max_distance_px=150.0, track_match_window=5
+    ) == [10]
+
+
+def test_filter_contacts_by_player_proximity_drops_when_nearby_frame_track_still_too_far():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {}, 12: {7: (500.0, 500.0, 501.0, 501.0)}}
+    assert filter_contacts_by_player_proximity(
+        [10], ball_positions, players, max_distance_px=150.0, track_match_window=5
+    ) == []
+
+
+def test_filter_contacts_by_player_proximity_skips_contact_with_no_ball_position():
+    assert filter_contacts_by_player_proximity([10], {}, {10: {1: (0.0, 0.0, 0.0, 0.0)}}) == []
+
+
+def test_filter_contacts_by_player_proximity_preserves_order_and_partial_results():
+    ball_positions = {10: (0.0, 0.0), 20: (0.0, 0.0), 30: (0.0, 0.0)}
+    players = {
+        10: {1: (50.0, 0.0, 50.0, 0.0)},   # kept - nearby
+        20: {1: (500.0, 0.0, 500.0, 0.0)},  # dropped - far
+        30: {1: (10.0, 0.0, 10.0, 0.0)},   # kept - nearby
+    }
+    assert filter_contacts_by_player_proximity([10, 20, 30], ball_positions, players, max_distance_px=150.0) == [10, 30]
+
+
+# --- attribute_touches: temporal-window rescue ---
+
+def test_attribute_touches_rescues_from_nearby_frame_when_untracked_at_contact():
+    # Nobody is tracked at the exact contact frame (10), but the real toucher's track
+    # shows up 3 frames later, right where the ball was - a confirmation-lag rescue.
+    ball_positions = {10: (5.0, 5.0)}
+    players = {10: {}, 13: {7: (5.0, 5.0, 6.0, 6.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0, track_match_window=5)
+    assert touches == [Touch(frame_idx=10, track_id=7, distance_px=0.0)]
+
+
+def test_attribute_touches_rescue_still_respects_max_distance():
+    ball_positions = {10: (0.0, 0.0)}
+    players = {10: {}, 12: {7: (500.0, 500.0, 501.0, 501.0)}}
+    touches = attribute_touches([10], ball_positions, players, max_distance_px=150.0, track_match_window=5)
+    assert touches[0].track_id is None
+
+
+def test_attribute_touches_veto_is_not_overridden_by_a_nearby_frame_candidate():
+    # A tracked candidate exists AT the contact frame and gets vetoed (closer untracked
+    # raw detection) - a nearby-frame track that's now closer must NOT resurrect the
+    # attribution, since the veto's rejection wasn't about a missing track, it was
+    # specific evidence the direct candidate isn't the real toucher.
+    ball_positions = {10: (100.0, 100.0)}
+    players = {
+        10: {1: (0.0, 0.0, 10.0, 10.0)},  # tracked candidate, ~127px away, will be vetoed
+        11: {2: (100.0, 100.0, 101.0, 101.0)},  # a different track, right on the ball
+    }
+    raw_boxes = {10: [(95.0, 95.0, 105.0, 105.0)]}  # untracked, right on the ball -> vetoes track 1
+    touches = attribute_touches([10], ball_positions, players, raw_boxes, max_distance_px=150.0, track_match_window=5)
+    assert touches == [Touch(frame_idx=10, track_id=None, distance_px=pytest.approx(127.28, rel=1e-3))]
+
+
+# --- referee zone exclusion ---
+
+def test_in_referee_zone_true_inside_zone():
+    x1, y1, x2, y2 = REFEREE_ZONE_PX
+    center = ((x1 + x2) / 2, (y1 + y2) / 2)
+    assert in_referee_zone(center) is True
+
+
+def test_in_referee_zone_false_outside_zone():
+    assert in_referee_zone((0.0, 0.0)) is False
 
 
 # --- zone bucketing ---

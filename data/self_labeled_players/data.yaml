@@ -1,0 +1,5 @@
+names:
+- player
+nc: 1
+train: train/images
+val: val/images

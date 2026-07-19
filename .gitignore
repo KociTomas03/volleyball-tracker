@@ -13,8 +13,10 @@ data/frames_dense/
 data/frames_dense2/
 data/roboflow_ball/
 data/roboflow_ball_seg/
+data/roboflow_players/
 data/combined_ball_dataset.yaml
 data/combined_ball_dataset_seg.yaml
+data/combined_player_dataset.yaml
 data/self_labeled_seg_dataset.yaml
 data/annotations/detect_review/
 data/annotations/ball_zero_shot/
@@ -23,6 +25,8 @@ data/self_labeled/*/images/
 data/self_labeled/*/labels.cache
 data/self_labeled_seg/*/images/
 data/self_labeled_seg/*/labels.cache
+data/self_labeled_players/*/images/
+data/self_labeled_players/*/labels.cache
 data/tracked/
 
 models/

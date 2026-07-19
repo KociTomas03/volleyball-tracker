@@ -82,6 +82,7 @@ def click_points_interactive(
     start_frame_index: int,
     labels: list[str],
     initial_points: dict[str, tuple[float, float]] | None = None,
+    display_scale: float = 1.0,
 ) -> dict[str, tuple[float, float]]:
     """Let the user click each labeled reference point, scrubbing between frames
     of `video_path` as needed (e.g. to dodge a player standing on a point).
@@ -95,6 +96,12 @@ def click_points_interactive(
     back to a wrong one and re-click it, no need to restart the whole session.
     `initial_points` (e.g. loaded from a prior run's *_points.json) seeds the
     session so only the wrong points need to be redone.
+
+    `display_scale` shrinks (or grows) only the on-screen window - e.g. 0.6 on
+    a 1920x1080 source shows a ~1152x648 window - while `clicked` still stores
+    native-resolution pixel coordinates (divided back out of the click
+    position), so the saved homography is identical regardless of what scale
+    was used to place the points.
 
     Controls: click to place/overwrite the point at the cursor and advance;
     'b' moves the cursor back, 'f' moves it forward (also doubles as "skip"
@@ -111,9 +118,11 @@ def click_points_interactive(
     state = {"index": start_frame_index, "frame": extract_frame(video_path, start_frame_index)}
 
     def redraw() -> np.ndarray:
-        display = state["frame"].copy()
+        native = state["frame"]
+        display = (cv2.resize(native, (int(native.shape[1] * display_scale), int(native.shape[0] * display_scale)))
+                    if display_scale != 1.0 else native.copy())
         for label, point in clicked.items():
-            x, y = int(point[0]), int(point[1])
+            x, y = int(point[0] * display_scale), int(point[1] * display_scale)
             color = (0, 255, 255) if label == labels[cursor] else (0, 0, 255)
             cv2.circle(display, (x, y), 5, color, -1)
             cv2.putText(display, label, (x + 8, y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
@@ -128,7 +137,7 @@ def click_points_interactive(
     def on_click(event: int, x: int, y: int, flags: int, userdata: object) -> None:
         nonlocal cursor
         if event == cv2.EVENT_LBUTTONDOWN:
-            clicked[labels[cursor]] = (float(x), float(y))
+            clicked[labels[cursor]] = (x / display_scale, y / display_scale)
             cursor = min(cursor + 1, len(labels) - 1)
             cv2.imshow(window, redraw())
 
@@ -257,6 +266,14 @@ def main() -> None:
         default=None,
         help="output path for the homography JSON (default: data/calibration/<video-stem>_homography.json)",
     )
+    parser.add_argument(
+        "--display-scale",
+        type=float,
+        default=1.0,
+        help="shrink (e.g. 0.6) or grow the interactive click window if the native frame "
+        "resolution doesn't fit your screen - clicked points are still stored at full "
+        "native resolution regardless of this value",
+    )
     args = parser.parse_args()
 
     if args.points_json is not None:
@@ -268,7 +285,8 @@ def main() -> None:
         if args.resume_json is not None:
             raw_points = json.loads(args.resume_json.read_text())
             initial_points = {label: (float(xy[0]), float(xy[1])) for label, xy in raw_points.items()}
-        points_px = click_points_interactive(args.video, args.frame_index, labels, initial_points)
+        points_px = click_points_interactive(args.video, args.frame_index, labels, initial_points,
+                                              display_scale=args.display_scale)
 
     homography = compute_homography(points_px)
 
