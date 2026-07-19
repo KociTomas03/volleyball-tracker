@@ -11,11 +11,14 @@ from pathlib import Path
 import cv2
 from ultralytics import YOLO
 
-PLAYER_MODEL_PATH = "models/yolov8n.pt"
+PLAYER_MODEL_PATH = "models/player_yolov8n_v1.pt"
 BALL_MODEL_PATH = "models/ball_yolov8n_seg_v4.pt"
 PLAYER_CONF = 0.4
 BALL_CONF = 0.25
-COCO_PERSON_CLASS = 0
+# Single-class (nc=1, "player") since player_yolov8n_v1 - was COCO_PERSON_CLASS when
+# PLAYER_MODEL_PATH was the stock 80-class yolov8n.pt; kept as a defensive filter in
+# case a future player model is ever multi-class again.
+PLAYER_CLASS = 0
 
 # Ultralytics' `model()` defaults to an internal conf=0.25 cutoff during inference/NMS,
 # applied before our own min_conf filtering ever sees the results. Without passing conf=
@@ -53,7 +56,7 @@ def detect_players(image_path: str, min_conf: float = PLAYER_CONF) -> list[dict]
     results = model(image_path, conf=DETECT_INTERNAL_CONF, verbose=False)[0]
     out = []
     for box in results.boxes:
-        if int(box.cls[0]) != COCO_PERSON_CLASS:
+        if int(box.cls[0]) != PLAYER_CLASS:
             continue
         conf = float(box.conf[0])
         if conf < min_conf:
