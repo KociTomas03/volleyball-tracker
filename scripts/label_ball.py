@@ -64,8 +64,11 @@ def save_frame(row: dict, boxes: list[tuple[int, int, int, int]], img_w: int, im
 class BoxDrawer:
     def __init__(self, scale: float, seed_boxes: list[tuple[float, float, float, float]] | None = None):
         self.scale = scale
-        # display-space boxes (x1,y1,x2,y2) - seed_boxes are native-pixel-space, scaled here
-        self.boxes = [(x1 * scale, y1 * scale, x2 * scale, y2 * scale) for x1, y1, x2, y2 in (seed_boxes or [])]
+        # display-space boxes (x1,y1,x2,y2) - seed_boxes are native-pixel-space, scaled here.
+        # cv2.rectangle requires int points, so round now rather than mixing float seed
+        # boxes with the int boxes drag-drawing produces.
+        self.boxes = [(int(x1 * scale), int(y1 * scale), int(x2 * scale), int(y2 * scale))
+                      for x1, y1, x2, y2 in (seed_boxes or [])]
         self.dragging = False
         self.start = None
         self.cur = None
